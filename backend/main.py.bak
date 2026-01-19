@@ -1,0 +1,896 @@
+from datetime import date
+import os
+import sys
+from pathlib import Path
+
+print(f"🐍 Python version: {sys.version}")
+print(f"📦 Backend dir: {Path(__file__).resolve().parent}")
+from typing import List, Optional
+
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+
+import crud, models, schemas
+from database import Base, engine, get_db, SessionLocal
+
+# CRITICAL: Force database creation and seeding at module level for Vercel
+# try:
+#     print("📡 Initializing database at module level...")
+#     Base.metadata.create_all(bind=engine)
+#     print("✅ Database initialized successfully")
+#     
+#     # Try seeding / syncing
+#     db = next(get_db())
+#     try:
+#         from seed_data import get_initial_assets
+#         initial_assets = get_initial_assets()
+#         current_assets = crud.get_assets(db)
+#         existing_ids = {a.id for a in current_assets}
+#         
+#         added_count = 0
+#         updated_count = 0
+#         for asset_data in initial_assets:
+#             if asset_data.id not in existing_ids:
+#                 print(f"🌱 Adding missing asset: {asset_data.id} ({asset_data.name})")
+#                 crud.create_asset_direct(db, asset_data)
+#                 added_count += 1
+#             else:
+#                 # Update existing asset if quantity or other key fields differ
+#                 existing_asset = crud.get_asset(db, asset_data.id)
+#                 if existing_asset and existing_asset.quantity != asset_data.quantity:
+#                     print(f"🔄 Updating asset {asset_data.id}: quantity {existing_asset.quantity} -> {asset_data.quantity}")
+#                     existing_asset.quantity = asset_data.quantity
+#                     updated_count += 1
+#         
+#         if added_count > 0 or updated_count > 0:
+#             db.commit()
+#             print(f"✅ Sync complete: {added_count} added, {updated_count} updated")
+#         else:
+#             print("📊 Database is already matching seed data")
+#     finally:
+#         db.close()
+# except Exception as e:
+#     print(f"❌ Failed to initialize database: {e}")
+from simulator import calculate_amortization_french, compare_mortgage_vs_portfolio, calculate_daily_comparison
+from seed_data import get_initial_assets
+
+# Robust path resolution for Vercel
+BACKEND_DIR = Path(__file__).resolve().parent
+BASE_DIR = BACKEND_DIR.parent if (BACKEND_DIR.parent / "frontend").exists() else BACKEND_DIR
+
+from contextlib import asynccontextmanager
+
+# Optional templates and static files (only if they exist)
+templates_dir = BASE_DIR / "frontend" / "templates"
+if templates_dir.exists():
+    templates = Jinja2Templates(directory=str(templates_dir))
+else:
+    templates = None
+
+static_dir = BASE_DIR / "frontend" / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🚀 Backend lifespan starting...")
+    try:
+        # Check if we are in Postgres or SQLite
+        db_type = "Postgres" if "postgresql" in DATABASE_URL else "SQLite"
+        print(f"📡 Connecting to {db_type} database...")
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables created/verified")
+        
+        # Seed inicial si la tabla está vacía
+        db = next(get_db())
+        try:
+            assets = crud.get_assets(db)
+            print(f"📊 Found {len(assets)} assets in database")
+            if not assets:
+                print("🌱 Seeding initial assets...")
+                crud.create_assets(db, get_initial_assets())
+                print("✅ Seeding complete")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"❌ ERROR DURING STARTUP: {e}")
+    
+    yield
+    print("🚀 Backend lifespan ending...")
+
+
+app = FastAPI(title="Portfolio Master API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/api/sanity")
+def sanity_check():
+    return {"status": "alive", "timestamp": str(date.today())}
+
+
+@app.get("/")
+def index(request: Request):
+    if not templates:
+        return {"status": "ok", "message": "Portfolio Master API is running"}
+    return templates.TemplateResponse("index.html", {"request": request})
+    """
+    Renderiza la página principal (equivalente a Finanzas.html pero usando BBDD y API).
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/api/assets", response_model=List[schemas.Asset])
+def list_assets(category: Optional[str] = None, db: Session = Depends(get_db)):
+    if category and category.lower() != "all":
+        return crud.get_assets_by_category(db, category)
+    return crud.get_assets(db)
+
+
+@app.get("/assets/{asset_id}")
+def asset_detail_page(asset_id: str, request: Request, db: Session = Depends(get_db)):
+    asset = crud.get_asset(db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    return templates.TemplateResponse(
+        "asset_detail.html", {"request": request, "asset_id": asset_id, "asset_name": asset.name}
+    )
+
+
+@app.get("/api/assets/changes")
+def get_assets_24h_changes(min_value: float = 1000, db: Session = Depends(get_db)):
+    """
+    Devuelve el cambio porcentual de 24h para cada activo.
+    Compara el precio actual con el último precio diferente (para manejar fines de semana).
+    Usa asset.price_eur para calcular el valor actual (consistente con lista principal).
+    Solo incluye activos con valor >= min_value (default 1000€).
+    """
+    assets = crud.get_assets(db)
+    
+    result = []
+    for asset in assets:
+        # Usar siempre asset.price_eur para el valor actual (consistente con lista principal)
+        current_price = asset.price_eur
+        current_value = current_price * asset.quantity
+        
+        # Filtrar activos con valor menor al mínimo
+        if current_value < min_value:
+            continue
+        
+        # Obtener los últimos precios históricos para encontrar el último cambio real
+        # Buscamos hasta 10 días atrás para cubrir fines de semana y festivos
+        recent_prices = db.query(models.HistoricalPrice).filter(
+            models.HistoricalPrice.asset_id == asset.id
+        ).order_by(models.HistoricalPrice.date.desc()).limit(10).all()
+        
+        change_pct = 0.0
+        if len(recent_prices) >= 2:
+            latest_price = recent_prices[0].price_eur
+            
+            # Buscar el primer precio que sea diferente al actual (último día de trading real)
+            previous_price = None
+            for hp in recent_prices[1:]:
+                # Considerar diferente si hay más de 0.01% de diferencia
+                if abs(hp.price_eur - latest_price) / latest_price > 0.0001:
+                    previous_price = hp.price_eur
+                    break
+            
+            # Si todos los precios son iguales, usar el más antiguo disponible
+            if previous_price is None and len(recent_prices) > 1:
+                previous_price = recent_prices[-1].price_eur
+            
+            if previous_price and previous_price > 0:
+                change_pct = ((latest_price - previous_price) / previous_price) * 100
+        
+        result.append({
+            "id": asset.id,
+            "name": asset.name,
+            "current_value": current_value,
+            "change_24h_pct": round(change_pct, 2)
+        })
+    
+    # Ordenar por cambio absoluto (los que más han movido)
+    result.sort(key=lambda x: abs(x["change_24h_pct"]), reverse=True)
+    
+    return result
+
+
+@app.get("/api/assets/{asset_id}", response_model=schemas.AssetDetail)
+def get_asset_detail(asset_id: str, db: Session = Depends(get_db)):
+    asset = crud.get_asset(db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    history_models = crud.get_history_for_asset(db, asset_id)
+    history = [
+        schemas.HistoricalPoint(date=h.date, price_eur=h.price_eur) for h in history_models
+    ]
+    return schemas.AssetDetail(
+        **schemas.Asset.model_validate(asset).model_dump(), history=history
+    )
+
+
+
+@app.get("/api/assets/{asset_id}/history", response_model=List[schemas.HistoricalPoint])
+def get_asset_history(asset_id: str, db: Session = Depends(get_db)):
+    """
+    Devuelve histórico almacenado en la BBDD. Si no hay datos,
+    intenta obtener ~5 años desde Yahoo o CoinGecko y los guarda.
+    """
+    asset = crud.get_asset(db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+
+    history = crud.get_history_for_asset(db, asset_id)
+    if history:
+        return [schemas.HistoricalPoint(date=h.date, price_eur=h.price_eur) for h in history]
+
+    # No hay histórico: lo intentamos cargar desde las APIs externas (5 años)
+    series_dict: dict[date, float] = {}
+    if asset.yahoo_symbol:
+        raw = fetch_history_yahoo(asset.yahoo_symbol, years=5)
+        for dt, price in raw:
+            series_dict[dt.date()] = price
+    elif asset.coingecko_id:
+        raw = fetch_history_coingecko(asset.coingecko_id, years=1)
+        for dt, price in raw:
+            series_dict[dt.date()] = price
+
+    if series_dict:
+        # Guardar en BBDD
+        points = {asset_id: series_dict}
+        crud.save_historical_points(db, points)
+        history = crud.get_history_for_asset(db, asset_id)
+        return [schemas.HistoricalPoint(date=h.date, price_eur=h.price_eur) for h in history]
+
+    # Si no se pudo obtener nada, devolvemos vacío
+    return []
+
+
+@app.put("/api/assets/{asset_id}", response_model=schemas.Asset)
+def update_asset(asset_id: str, data: schemas.AssetUpdate, db: Session = Depends(get_db)):
+    asset = crud.update_asset(db, asset_id, data)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    return asset
+
+
+@app.post("/api/markets/update")
+def update_markets(db: Session = Depends(get_db)):
+    import market_client
+    assets = crud.get_assets(db)
+
+    # 1. Ratio USD/EUR
+    usd_to_eur = market_client.fetch_usd_eur_rate()
+
+    # 2. Acciones (Yahoo)
+    yahoo_symbols = {
+        a.id: a.yahoo_symbol
+        for a in assets
+        if a.yahoo_symbol and not a.manual
+    }
+    yahoo_prices = market_client.fetch_yahoo_prices(yahoo_symbols, usd_to_eur=usd_to_eur)
+
+    # 3. Criptos (CoinGecko)
+    cg_ids = {
+        a.id: a.coingecko_id
+        for a in assets
+        if a.coingecko_id and not a.manual
+    }
+    cg_prices = market_client.fetch_coingecko_prices(cg_ids)
+
+    # 4. Indexa - actualizar idx_1 con el valor total
+    indexa_data = market_client.fetch_indexa_accounts()
+    indexa_prices: dict[str, float] = {}
+    if indexa_data and indexa_data.get("success"):
+        total_value = indexa_data.get("total_value", 0.0)
+        if total_value > 0:
+            # Actualizar el activo genérico idx_1 con el valor total
+            indexa_prices["idx_1"] = float(total_value)
+            print(f"✅ Indexa total value: {total_value:.2f}€")
+
+    # Fusionar todos los precios
+    merged_prices: dict[str, float] = {}
+    merged_prices.update(yahoo_prices)
+    merged_prices.update(cg_prices)
+    merged_prices.update(indexa_prices)
+
+    crud.update_prices_bulk(db, merged_prices)
+
+    # Guardar precios del día actual en histórico para TODOS los activos
+    # (no solo los actualizados, para evitar discrepancias en el gráfico)
+    from datetime import date as date_type
+    today = date_type.today()
+    historical_points = {}
+    
+    # Refrescar assets para obtener precios actualizados
+    assets = crud.get_assets(db)
+    for asset in assets:
+        if asset.price_eur > 0:
+            historical_points[asset.id] = {today: asset.price_eur}
+    
+    if historical_points:
+        crud.save_historical_points(db, historical_points)
+
+    return {
+        "success": True,
+        "usd_to_eur": usd_to_eur,
+        "updated": list(merged_prices.keys()),
+    }
+
+
+@app.post("/api/history/load-all")
+def load_all_historical_data(db: Session = Depends(get_db)):
+    """
+    Carga datos históricos de 5 años para todos los activos.
+    Útil para inicializar la base de datos o refrescar históricos.
+    Nota: Este endpoint puede tardar varios minutos debido a rate limiting de las APIs.
+    """
+    import time
+    import market_client
+    
+    assets = crud.get_assets(db)
+    loaded_assets = []
+    errors = []
+    skipped = []
+    
+    # Delay entre peticiones para evitar rate limiting (CoinGecko: 10-30 req/min gratis)
+    API_DELAY = 1.5  # segundos
+    
+    for asset in assets:
+        asset_id = asset.id
+        series_dict: dict[date, float] = {}
+        
+        try:
+            if asset.yahoo_symbol:
+                print(f"Loading Yahoo history for {asset_id}: {asset.yahoo_symbol}")
+                raw = market_client.fetch_history_yahoo(asset.yahoo_symbol, years=5)
+                for dt, price in raw:
+                    series_dict[dt.date()] = price
+                print(f"  -> Got {len(series_dict)} points")
+                time.sleep(API_DELAY)  # Rate limiting
+            elif asset.ticker and asset.category == "Cripto":
+                # CryptoCompare para cryptos: ofrece 5+ años gratis (2000 puntos)
+                print(f"Loading CryptoCompare history for {asset_id}: {asset.ticker}")
+                raw = market_client.fetch_history_cryptocompare(asset.ticker, years=5)
+                for dt, price in raw:
+                    series_dict[dt.date()] = price
+                print(f"  -> Got {len(series_dict)} points")
+                
+                # Fallback a CoinGecko si CryptoCompare no tiene datos
+                if not series_dict and asset.coingecko_id:
+                    print(f"  Fallback to CoinGecko for {asset_id}")
+                    raw = market_client.fetch_history_coingecko(asset.coingecko_id, years=1)
+                    for dt, price in raw:
+                        series_dict[dt.date()] = price
+                    print(f"  -> Got {len(series_dict)} points (CoinGecko)")
+                
+                time.sleep(API_DELAY)
+            else:
+                skipped.append(asset_id)
+                continue
+            
+            if series_dict:
+                points = {asset_id: series_dict}
+                crud.save_historical_points(db, points)
+                loaded_assets.append({
+                    "id": asset_id,
+                    "name": asset.name,
+                    "points": len(series_dict)
+                })
+        except Exception as e:
+            print(f"Error loading {asset_id}: {e}")
+            errors.append({"id": asset_id, "error": str(e)})
+    
+    # También crear un snapshot del valor actual del portafolio
+    from datetime import date as date_type
+    today = date_type.today()
+    global_value = crud.calculate_portfolio_value(db)
+    crud.save_portfolio_snapshot(db, today, global_value)
+    
+    return {
+        "success": True,
+        "loaded_assets": loaded_assets,
+        "errors": errors,
+        "skipped": skipped,
+        "total_loaded": len(loaded_assets)
+    }
+
+
+@app.get("/api/indexa/accounts")
+def get_indexa_accounts():
+    """
+    Endpoint para obtener datos de Indexa Capital.
+    Accede directamente a la API de Indexa (no requiere proxy separado).
+    """
+    try:
+        import market_client
+        data = market_client.fetch_indexa_accounts()
+        if not data:
+            return {"success": False, "error": "Sin respuesta de Indexa API", "accounts": []}
+        if not data.get("success"):
+            error_msg = data.get("error", "Error desconocido en Indexa API")
+            return {"success": False, "error": error_msg, "accounts": []}
+        return data
+    except Exception as e:
+        return {"success": False, "error": f"Error de conexión: {str(e)}", "accounts": []}
+
+
+@app.post("/api/indexa/history/load")
+def load_indexa_history(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """
+    Carga el histórico completo de Indexa Capital en background.
+    """
+    def _do_load():
+        try:
+            # 1. Obtener historial (ya viene bruto de market_client)
+            # Re-crear sesión de DB para el thread
+            local_db = SessionLocal()
+            try:
+                # Import market_client here if needed, or rely on global
+                import market_client
+                accounts = market_client.fetch_indexa_history()
+                
+                if not accounts: 
+                    print("⚠️ No accounts returned from fetch_indexa_history")
+                    return
+
+                # Preparar lista para creación/actualización de activos
+                assets_to_sync = []
+                loaded_assets = []
+                
+                for asset_id, account_data in accounts.items():
+                    history_points = account_data.get("history", [])
+                    current_value = account_data.get("current_value", 0)
+                    
+                    # Registrar activo en la tabla assets si no existe o actualizarlo
+                    assets_to_sync.append(schemas.AssetCreate(
+                        id=asset_id,
+                        name=account_data.get("name", asset_id),
+                        ticker="IDX",
+                        category="Indexa Capital",
+                        platform="Indexa",
+                        quantity=1.0,
+                        price_eur=current_value,
+                        indexa_api=True
+                    ))
+                    
+                    if history_points:
+                        # Convertir a formato esperado por save_historical_points
+                        series_dict = {dt.date(): value for dt, value in history_points}
+                        points = {asset_id: series_dict}
+                        crud.save_historical_points(local_db, points)
+                        
+                        loaded_assets.append({
+                            "id": asset_id,
+                            "name": account_data.get("name", asset_id),
+                            "points": len(series_dict)
+                        })
+                
+                # --- AGGREGATE HISTORY FOR idx_1 (Main Asset) ---
+                aggregated_history = {}
+                for asset_id, account_data in accounts.items():
+                    h_points = account_data.get("history", [])
+                    for dt, val in h_points:
+                        d_key = dt.date()
+                        aggregated_history[d_key] = aggregated_history.get(d_key, 0.0) + val
+                        
+                if aggregated_history:
+                    crud.save_historical_points(local_db, {"idx_1": aggregated_history})
+                    
+                # Update idx_1 Current Price (Weighted Total)
+                total_weighted_value = sum(a.get("current_value", 0) for a in accounts.values())
+                if total_weighted_value > 0:
+                    existing_idx1 = crud.get_asset(local_db, "idx_1")
+                    if existing_idx1:
+                        existing_idx1.price_eur = total_weighted_value
+                        local_db.commit()
+                        print(f"✅ Updated idx_1 current price: {total_weighted_value}€")
+                
+                # Sincronizar activos en la BD
+                if assets_to_sync:
+                    crud.create_assets(local_db, assets_to_sync)
+                    
+                    # Eliminar la cuenta duplicada de "Indexa Global" si existe
+                    idx_1 = crud.get_asset(local_db, "idx_1")
+                    if idx_1:
+                        # Use delete logic carefully (or skip if risky)
+                        local_db.delete(idx_1)
+                        local_db.commit()
+                        print("🗑️ Deleted duplicate asset idx_1")
+                
+                # Snapshot
+                from datetime import date as date_type
+                today = date_type.today()
+                total_indexa_value = sum(acc.get("current_value", 0) for acc in accounts.values())
+                if total_indexa_value > 0:
+                     for asset_id, account_data in accounts.items():
+                        current_value = account_data.get("current_value", 0)
+                        if current_value > 0:
+                            crud.save_portfolio_snapshot(local_db, today, current_value, asset_id=asset_id)
+                            
+                print(f"✅ Background Load Complete: {len(loaded_assets)} accounts updated.")
+            
+            except Exception as e:
+                print(f"❌ Background Load Error: {e}")
+                import traceback
+                traceback.print_exc()
+            finally:
+                local_db.close()
+                
+    background_tasks.add_task(_do_load)
+    return {"message": "Carga de histórico Indexa iniciada en background", "success": True}
+@app.get("/api/health")
+def health_check():
+    """Endpoint de salud compatible con el antiguo proxy."""
+    try:
+        from market_client import _get_indexa_token
+        _get_indexa_token()
+        return {"status": "ok", "token_available": True}
+    except Exception:
+        return {"status": "ok", "token_available": False}
+
+
+# ============= Portfolio History Endpoints =============
+
+@app.get("/api/portfolio/history", response_model=List[schemas.PortfolioHistoryPoint])
+def get_portfolio_history(
+    period: str = "1m",
+    category: Optional[str] = None,
+    asset_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Devuelve el histórico de valor del portafolio.
+    Primero intenta usar snapshots guardados, si no hay suficientes reconstruye desde precios.
+    """
+    start_date, end_date = crud.get_period_dates(period)
+    
+    # Intentar obtener snapshots guardados
+    snapshots = crud.get_portfolio_snapshots(db, start_date, end_date, category, asset_id)
+    
+    if len(snapshots) >= 5:  # Si tenemos suficientes snapshots, usarlos
+        return [
+            schemas.PortfolioHistoryPoint(date=s.date, value=s.total_value_eur)
+            for s in snapshots
+        ]
+    
+    # Si no, reconstruir desde precios históricos de activos
+    history = crud.reconstruct_portfolio_history(db, start_date, end_date, category, asset_id)
+    
+    return [
+        schemas.PortfolioHistoryPoint(date=h["date"], value=h["value"])
+        for h in history
+    ]
+
+
+@app.get("/api/portfolio/performance", response_model=schemas.PortfolioPerformance)
+def get_portfolio_performance(
+    period: str = "24h",
+    category: Optional[str] = None,
+    asset_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Calcula el rendimiento del portafolio para un periodo dado.
+    """
+    from datetime import timedelta
+    
+    start_date, end_date = crud.get_period_dates(period)
+    
+    # Valor actual
+    current_value = crud.calculate_portfolio_value(db, category, asset_id)
+    
+    # For 24h period, we need yesterday's value specifically
+    # Look back up to 7 days to find a valid previous value (handles weekends)
+    if period == "24h":
+        today = date.today()
+        previous_value = None
+        
+        # Try to find yesterday's or most recent historical value
+        for days_back in range(1, 8):  # Look back up to 7 days
+            check_date = today - timedelta(days=days_back)
+            history = crud.reconstruct_portfolio_history(db, check_date, check_date, category, asset_id)
+            if history and len(history) > 0:
+                previous_value = history[0]["value"]
+                break
+        
+        if previous_value is None:
+            previous_value = current_value  # Fallback: no change
+    else:
+        # For other periods, use the first point in the range
+        history = crud.reconstruct_portfolio_history(db, start_date, end_date, category, asset_id)
+        if history:
+            previous_value = history[0]["value"]
+        else:
+            previous_value = current_value
+    
+    # Calcular cambio
+    change_absolute = current_value - previous_value
+    change_percent = (change_absolute / previous_value * 100) if previous_value > 0 else 0.0
+    
+    return schemas.PortfolioPerformance(
+        current_value=current_value,
+        previous_value=previous_value,
+        change_percent=round(change_percent, 2),
+        change_absolute=round(change_absolute, 2),
+        period=period
+    )
+
+
+@app.post("/api/portfolio/snapshot")
+def create_portfolio_snapshot(db: Session = Depends(get_db)):
+    """
+    Crea snapshots del valor actual del portafolio (global, por categoría, y por activo).
+    Diseñado para ser llamado diariamente por un cron job.
+    """
+    from datetime import date as date_type
+    today = date_type.today()
+    created_count = 0
+    
+    # Snapshot global
+    global_value = crud.calculate_portfolio_value(db)
+    crud.save_portfolio_snapshot(db, today, global_value)
+    created_count += 1
+    
+    # Snapshots por categoría
+    categories = ["Acciones", "Cripto", "Fondos", "Cash"]
+    for cat in categories:
+        cat_value = crud.calculate_portfolio_value(db, category=cat)
+        if cat_value > 0:
+            crud.save_portfolio_snapshot(db, today, cat_value, category=cat)
+            created_count += 1
+    
+    # Snapshots por activo individual
+    assets = crud.get_assets(db)
+    for asset in assets:
+        asset_value = asset.price_eur * asset.quantity
+        if asset_value > 0:
+            crud.save_portfolio_snapshot(db, today, asset_value, asset_id=asset.id)
+            created_count += 1
+    
+    return {"success": True, "snapshots_created": created_count, "date": str(today)}
+
+
+
+# ============= Simulator Endpoints =============
+
+@app.post("/api/simulator/amortization", response_model=List[schemas.AmortizationPoint])
+def get_amortization_schedule(params: schemas.MortgageParams):
+    """Genera el cuadro de amortización (Sistema Francés)"""
+    return calculate_amortization_french(params.principal, params.annual_rate, params.years)
+
+@app.post("/api/simulator/compare", response_model=schemas.SimulatorResponse)
+def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depends(get_db)):
+    """Compara el rendimiento de la cartera vs el coste de la hipoteca"""
+    try:
+        import market_client
+        # SIMULATOR CONFIG: Weights for specific Indexa accounts (Legacy Logic)
+        # Applied ONLY here in the simulator, not globally.
+        SIM_WEIGHTS = {
+            "76B4EQKT": 0.44,     # Margarita (44%)
+            "2RALDY9V": 0.0,      # Marcos (Excluded)
+            "23LLWQDX": 1.0       # Carmelo (Full)
+        }
+
+        # FILTER ASSETS: Only include Indexa, Funds, and specific manual items (matching original dashboard)
+        all_assets = crud.get_assets(db)
+        
+        # Original logic: 
+        # - Indexa Accounts: Included (Category="Indexa Capital" or indexa_api=True)
+        # - Funds: "myinv" (0P0001CLDK.F), "gold" (EGLN.L) -> Category="Fondos"
+        # - Manual: "ing" (Cash) -> Category="Cash" or manual=True
+        # - EXCLUDED: "Acciones", "Cripto" (unless manual=True which shouldn't happen for the scraped ones)
+        
+        sim_asset_ids = []
+        for a in all_assets:
+            is_indexa = a.category == "Indexa Capital" or a.indexa_api
+            is_fund = a.category == "Fondos"
+            is_manual_relevant = a.category == "Cash" or (a.manual and a.category not in ["Cripto", "Acciones"])
+            is_specific_fund = a.id in ["myinv", "gold"]
+            
+            # For Simulator, we prefer INDIVIDUAL Indexa accounts to apply specific weights.
+            # So we EXCLUDE the aggregated 'idx_1' and include '23LLWQDX', etc.
+            if is_indexa and a.id == "idx_1":
+                continue
+                
+            if is_indexa or is_fund or is_manual_relevant or is_specific_fund:
+                sim_asset_ids.append(a.id)
+
+        # SELF-HEALING: Check if idx_1 is present but has 0 price (common deployment issue)
+        # This block is now less relevant for the simulator's calculation, as idx_1 is excluded.
+        # However, it might still be useful for other parts of the app that rely on idx_1.
+        idx_1_asset = next((a for a in all_assets if a.id == "idx_1"), None)
+        if idx_1_asset and idx_1_asset.price_eur == 0:
+             print("🚑 idx_1 price is 0, attempting self-healing fetch...")
+             try:
+                 idata = fetch_indexa_accounts()
+                 if idata and idata.get("success"):
+                     val = idata.get("total_value", 0.0)
+                     if val > 0:
+                         print(f"🚑 Healed idx_1 price: {val}€")
+                         idx_1_asset.price_eur = val
+                         # Update DB too?
+                         existing = crud.get_asset(db, "idx_1")
+                         if existing:
+                             existing.price_eur = val
+                             db.commit()
+             except Exception as e:
+                 print(f"⚠️ Self-healing failed: {e}")
+
+        # --- Desglose por activo (Source of Truth for Basis AND Current Value) ---
+        # We calculate everything here to apply weights dynamically.
+        # `all_assets` is already fetched above.
+        asset_breakdown = []
+        
+        simulated_basis_sum = 0.0
+        simulated_current_sum = 0.0
+        
+        for a in all_assets: # Iterate all_assets, then filter by sim_asset_ids
+            if a.id not in sim_asset_ids:
+                continue
+                
+            if a.quantity <= 0:
+                continue
+                
+            # Determinar peso para este activo (Solo para Indexa)
+            # Check by ID or Name (since ID might be 'idx_23LLWQDX' or just '23LLWQDX')
+            weight = 1.0
+            if a.category == "Indexa Capital":
+                # Extract account number from ID (handle 'idx_' prefix if present)
+                raw_id = a.id.replace("idx_", "")
+                weight = SIM_WEIGHTS.get(raw_id, 1.0)
+                
+            hist = crud.get_history_for_asset(db, a.id, limit_days=365*5)
+            
+            sorted_hist = sorted(hist, key=lambda x: x.date)
+            start_price_obj = next((h for h in sorted_hist if h.date >= req.start_date), None)
+            start_price = start_price_obj.price_eur if start_price_obj else None
+
+            # FALLBACKS
+            # Force fix for Margarita (76B4EQKT) to use current price as start price
+            # This bypasses corrupted historical data (150k) in the DB.
+            if "76B4EQKT" in a.id:
+                 start_price = a.price_eur
+
+            if start_price is None or (start_price == a.price_eur and not hist):
+                if a.id == "myinv" or "0P0001CLDK" in str(a.yahoo_symbol):
+                    start_price = 12.2357
+                elif a.id == "gold" or "EGLN" in str(a.yahoo_symbol):
+                    start_price = 69.00
+                else:
+                    start_price = a.price_eur
+            
+            # Apply Weight to Raw Values
+            raw_initial = start_price * a.quantity
+            raw_current = a.price_eur * a.quantity
+            
+            initial_val = raw_initial * weight
+            current_val = raw_current * weight
+            
+            # Specific Adjustments (5000 withdrawal)
+            # Apply specific adjustments (matching original app)
+            if "23LLWQDX" in a.name or "23LLWQDX" in a.id or (a.id == "idx_1" and "Indexa" in a.category):
+                 initial_val -= 5000.0
+                 
+            change_pct = ((current_val - initial_val) / initial_val * 100) if initial_val > 0 else 0.0
+            
+            display_name = a.name
+            if weight < 1.0 and weight > 0:
+                display_name = f"{a.name} ({weight*100:.0f}%)"
+            
+            asset_breakdown.append({
+                "name": display_name,
+                "category": a.category,
+                "initial_value": round(initial_val, 2),
+                "current_value": round(current_val, 2),
+                "change_pct": round(change_pct, 2)
+            })
+            
+            simulated_basis_sum += initial_val
+            simulated_current_sum += current_val
+
+        # 1. & 2. Simulator specific totals
+        basis = simulated_basis_sum
+        current_value = simulated_current_sum
+        
+        # Fallback if empty (shouldn't happen)
+        if basis == 0 and current_value == 0:
+             current_value = crud.calculate_portfolio_value(db, asset_ids=sim_asset_ids)
+             # If current_value is still 0, basis should also be 0 to avoid division by zero.
+             basis = current_value 
+
+        # 3. Generar cuadro de amortización
+        schedule = calculate_amortization_french(req.mortgage.principal, req.mortgage.annual_rate, req.mortgage.years)
+        
+        # 4. Comparar
+        comparison = compare_mortgage_vs_portfolio(current_value, basis, req.tax_rate, schedule, req.start_date)
+        
+        # 5. Generar histórico diario para el gráfico
+        portfolio_history = crud.reconstruct_portfolio_history(db, req.start_date, date.today(), asset_ids=sim_asset_ids)
+        
+        # Normalize Chart
+        if portfolio_history and abs(portfolio_history[0]["value"] - basis) > 1000:
+             initial_history_val = portfolio_history[0]["value"]
+             diff = basis - initial_history_val
+             for point in portfolio_history:
+                 point["value"] += diff
+                 
+        daily_history = calculate_daily_comparison(
+            portfolio_history, 
+            basis, 
+            req.tax_rate, 
+            req.mortgage.principal, 
+            req.mortgage.annual_rate, 
+            schedule, 
+            req.start_date
+        )
+        
+        # asset_breakdown already calculated
+        
+        return {
+            **comparison,
+            "amortization_schedule": schedule,
+            "daily_history": daily_history,
+            "asset_breakdown": asset_breakdown
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"DEBUG ERROR: {str(e)}")
+
+
+def get_app():
+    return app
+
+
+# ============= Portfolio Status File (for cross-app sync) =============
+
+import json as json_lib
+
+# Use /tmp for state files in Vercel environments
+if os.getenv("VERCEL"):
+    PORTFOLIO_STATUS_FILE = Path("/tmp/portfolio_status.json")
+else:
+    PORTFOLIO_STATUS_FILE = BASE_DIR / "portfolio_status.json"
+
+
+@app.post("/api/portfolio/status")
+def save_portfolio_status(request_data: dict):
+    """
+    Guarda el estado actual del portafolio calculado por el frontend.
+    Esto permite que otras apps (como Planificador) lean los valores live.
+    """
+    try:
+        with open(PORTFOLIO_STATUS_FILE, 'w') as f:
+            json_lib.dump(request_data, f)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/portfolio/status")
+def get_portfolio_status():
+    """
+    Lee el estado del portafolio guardado por el frontend.
+    """
+    try:
+        if PORTFOLIO_STATUS_FILE.exists():
+            with open(PORTFOLIO_STATUS_FILE, 'r') as f:
+                return json_lib.load(f)
+        return {"current_value": 0, "change_percent": 0, "history": [], "timestamp": None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+

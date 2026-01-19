@@ -1,0 +1,7 @@
+.vercel
+.venv
+__pycache__
+*.pyc
+*.db
+node_modules
+.DS_Store

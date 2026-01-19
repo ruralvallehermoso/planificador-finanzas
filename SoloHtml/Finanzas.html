@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Master - V15 Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <script>
+        // Configuración de Tailwind para usar la clase 'dark'
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        .dark {
+            --bg-main: #0b1120;
+            --bg-card: #151e2e;
+            --text-main: #cbd5e1;
+            --border-color: #334155;
+        }
+
+        html,
+        body {
+            overflow-y: auto !important;
+            height: auto !important;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .animate-up {
+            animation: highlightGreen 2s ease-out;
+        }
+
+        .animate-down {
+            animation: highlightRed 2s ease-out;
+        }
+
+        @keyframes highlightGreen {
+            0% {
+                background-color: rgba(52, 211, 153, 0.2);
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        @keyframes highlightRed {
+            0% {
+                background-color: rgba(248, 113, 113, 0.2);
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+
+
+        .badge {
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-live {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .dark .badge-live {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .badge-stock {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .dark .badge-stock {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .badge-manual {
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            cursor: pointer;
+        }
+
+        .dark .badge-manual {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+
+        .asset-icon {
+            background-color: #fff;
+            padding: 2px;
+            object-fit: contain;
+        }
+
+        .filter-btn {
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark .filter-btn.active {
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.4);
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Transiciones suaves */
+        * {
+            transition: background-color 0.2s, border-color 0.2s, color 0.1s;
+        }
+    </style>
+
+    <script>
+        // Aplicar modo oscuro antes de que la página cargue para evitar parpadeos
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+</head>
+
+<body class="bg-slate-50 dark:bg-[#0b1120]">
+
+    <div
+        class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 shrink-0 z-20 shadow-sm dark:shadow-xl transition-colors">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/30">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-slate-900 dark:text-white font-bold leading-tight tracking-tight text-lg">Master
+                        Portfolio</h1>
+                    <div class="flex items-center gap-2 text-[10px] font-bold tracking-wider mt-0.5 cursor-pointer hover:text-indigo-600 dark:hover:text-white group"
+                        onclick="updateMarkets()" id="status-area">
+                        <span class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500" id="status-dot"></span>
+                        <span class="text-slate-500 group-hover:text-inherit" id="status-text">LISTO</span>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="flex bg-slate-100 dark:bg-slate-800 rounded-full p-1 gap-1 border border-slate-200 dark:border-slate-700/50 transition-colors">
+                <button onclick="setFilter('All')" id="btn-All"
+                    class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm active">TODO</button>
+                <button onclick="setFilter('Cripto')" id="btn-Cripto"
+                    class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">CRIPTO</button>
+                <button onclick="setFilter('Acciones')" id="btn-Acciones"
+                    class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">ACCIONES</button>
+                <button onclick="setFilter('Fondos')" id="btn-Fondos"
+                    class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">FONDOS</button>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Botón Modo Oscuro/Claro -->
+                <button onclick="toggleTheme()"
+                    class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-all border border-slate-200 dark:border-slate-700"
+                    title="Cambiar Tema">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                            fill-rule="evenodd" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+
+                <!-- Botón Actualizar -->
+                <button onclick="updateMarkets()"
+                    class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-all border border-slate-200 dark:border-slate-700"
+                    title="Forzar Actualización">
+                    <svg id="refresh-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+
+                <div class="text-right min-w-[160px]">
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold" id="total-label">
+                        PATRIMONIO GLOBAL</p>
+                    <p class="text-3xl font-bold text-slate-900 dark:text-white mono tracking-tighter transition-all"
+                        id="global-total">---
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative">
+        <div
+            class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-0 lg:divide-x lg:divide-slate-200 dark:lg:divide-slate-800/50">
+
+            <div class="lg:col-span-2 p-4 md:p-6 bg-slate-50 dark:bg-[#0b1120] transition-colors">
+                <div class="flex justify-between items-end mb-4 px-1">
+                    <h2 class="text-slate-800 dark:text-white font-bold text-lg tracking-tight" id="list-title">Cartera
+                        de Activos</h2>
+                    <div class="text-xs text-slate-500 font-mono text-right">
+                        <span id="asset-count">0</span> items<br>
+                        <span id="usd-rate" class="text-[10px] text-slate-400 dark:text-slate-600">USD: ...</span>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm dark:shadow-xl border-t-4 border-t-indigo-500/20">
+                    <table class="w-full text-left text-sm">
+                        <thead
+                            class="bg-slate-100/90 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider sticky top-0 z-10 backdrop-blur-sm shadow-sm">
+                            <tr>
+                                <th class="px-5 py-3">Activo</th>
+                                <th class="px-5 py-3 text-center">Tipo</th>
+                                <th class="px-5 py-3 text-right">Peso (%)</th>
+                                <th class="px-5 py-3 text-right">Precio</th>
+                                <th class="px-5 py-3 text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="asset-table" class="divide-y divide-slate-200 dark:divide-slate-700/30"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div
+                class="lg:col-span-1 bg-white dark:bg-slate-900/30 p-4 md:p-6 flex flex-col border-l border-slate-200 dark:border-slate-800 transition-colors">
+                <div
+                    class="mb-6 bg-slate-50 dark:bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700/30 shadow-inner">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-slate-500 dark:text-slate-300 text-xs uppercase font-bold tracking-wider"
+                            id="chart-title">
+                            Distribución</h3>
+                    </div>
+                    <div class="relative h-56">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider px-1">Top
+                        Movers (Por Peso)
+                    </h3>
+                    <div id="top-assets-list" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal"
+        class="fixed inset-0 bg-black/60 dark:bg-black/90 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div
+            class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-600 w-80 shadow-2xl transition-colors">
+            <h3 class="text-slate-900 dark:text-white font-bold text-lg mb-1">Ajuste Manual</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">Edita la <span
+                    class="font-bold text-slate-800 dark:text-white">CANTIDAD</span> o el
+                PRECIO.</p>
+            <label class="text-[10px] uppercase text-slate-400 dark:text-slate-500 font-bold">Cantidad
+                (Tokens/Acciones)</label>
+            <input type="number" step="any" id="manual-qty"
+                class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white p-2 rounded-lg font-mono mb-2 outline-none focus:border-indigo-500">
+            <label class="text-[10px] uppercase text-slate-400 dark:text-slate-500 font-bold">Precio Unitario
+                (€)</label>
+            <input type="number" step="any" id="manual-price"
+                class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white p-2 rounded-lg font-mono mb-4 outline-none focus:border-indigo-500">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal()"
+                    class="px-4 py-2 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700">Cancelar</button>
+                <button onclick="saveManual()"
+                    class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. BASE DE DATOS (Extended V14)
+        const db = [
+            { id: 'goog', name: 'Google', ticker: 'GOOG', cat: 'Acciones', plat: 'Google', qty: 500, price: 246.95, yahoo: 'GOOG', currency: 'USD', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com&size=64' },
+            { id: 'spot', name: 'Spotify', ticker: 'SPOT', cat: 'Acciones', plat: 'Spotify', qty: 200, price: 552.15, yahoo: 'SPOT', currency: 'USD', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://spotify.com&size=64' },
+            { id: 'el', name: 'EssilorLuxottica', ticker: 'EL.PA', cat: 'Acciones', plat: 'BNP', qty: 627, price: 311.40, yahoo: 'EL.PA', currency: 'EUR', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://essilorluxottica.com&size=64' },
+            { id: 'btbt', name: 'Bit Digital', ticker: 'BTBT', cat: 'Acciones', plat: 'Degiro', qty: 879, price: 2.09, yahoo: 'BTBT', currency: 'USD', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://bit-digital.com&size=64' },
+
+            { id: 'btc', name: 'Bitcoin (Total)', ticker: 'BTC', cat: 'Cripto', plat: 'Multi', qty: 0.688292, price: 90000, api_id: 'bitcoin', img: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
+            { id: 'eth', name: 'Ethereum', ticker: 'ETH', cat: 'Cripto', plat: 'Coinbase', qty: 2.9673, price: 3000, api_id: 'ethereum', img: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
+            { id: 'sol', name: 'Solana', ticker: 'SOL', cat: 'Cripto', plat: 'Phantom', qty: 16.47, price: 140, api_id: 'solana', img: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
+            { id: 'bnb', name: 'Binance Coin', ticker: 'BNB', cat: 'Cripto', plat: 'Binance', qty: 2.25, price: 600, api_id: 'binancecoin', img: 'https://assets.coingecko.com/coins/images/825/large/binance-coin-logo.png' },
+
+            { id: 'orai', name: 'Oraichain', ticker: 'ORAI', cat: 'Cripto', plat: 'Wallet', qty: 1, price: 5.50, api_id: 'oraichain-token', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://orai.io&size=64' },
+            { id: 'pyth', name: 'Pyth Network', ticker: 'PYTH', cat: 'Cripto', plat: 'Wallet', qty: 1000, price: 0.40, api_id: 'pyth-network', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://pyth.network&size=64' },
+            { id: 'eigen', name: 'EigenLayer', ticker: 'EIGEN', cat: 'Cripto', plat: 'Wallet', qty: 154, price: 3.00, api_id: 'eigenlayer', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://eigenlayer.xyz&size=64' },
+            { id: 'ethfi', name: 'Ether.fi', ticker: 'ETHFI', cat: 'Cripto', plat: 'Wallet', qty: 101, price: 2.50, api_id: 'ether-fi', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://ether.fi&size=64' },
+            { id: 'ena', name: 'Ethena', ticker: 'ENA', cat: 'Cripto', plat: 'Wallet', qty: 100, price: 0.80, api_id: 'ethena', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://ethena.fi&size=64' },
+            { id: 'icp', name: 'Internet Computer', ticker: 'ICP', cat: 'Cripto', plat: 'Wallet', qty: 25, price: 10.00, api_id: 'internet-computer', img: 'https://assets.coingecko.com/coins/images/14495/large/Internet_Computer_logo.png' },
+            { id: 'wen', name: 'Wen', ticker: 'WEN', cat: 'Cripto', plat: 'Wallet', qty: 8130000, price: 0.0001, api_id: 'wen', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://wenwencoin.com&size=64' },
+            { id: 'shib', name: 'Shiba Inu', ticker: 'SHIB', cat: 'Cripto', plat: 'Wallet', qty: 22671195, price: 0.00001, api_id: 'shiba-inu', img: 'https://assets.coingecko.com/coins/images/11939/large/shiba.png' },
+            { id: 'sfund', name: 'Seedify.fund', ticker: 'SFUND', cat: 'Cripto', plat: 'Wallet', qty: 150, price: 2.00, api_id: 'seedify-fund', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://seedify.fund&size=64' },
+            { id: 'bgb', name: 'Bitget Token', ticker: 'BGB', cat: 'Cripto', plat: 'Bitget', qty: 63, price: 1.10, api_id: 'bitget-token', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://bitget.com&size=64' },
+
+            { id: 'dot', name: 'Polkadot', ticker: 'DOT', cat: 'Cripto', plat: 'Talisman', qty: 278.9, price: 5.50, api_id: 'polkadot', img: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png' },
+            { id: 'hbar', name: 'Hedera', ticker: 'HBAR', cat: 'Cripto', plat: 'Haspack', qty: 11192, price: 0.15, api_id: 'hedera-hashgraph', img: 'https://assets.coingecko.com/coins/images/3688/large/hbar.png' },
+            { id: 'jup', name: 'Jupiter', ticker: 'JUP', cat: 'Cripto', plat: 'Jupiter', qty: 1900.5, price: 0.90, api_id: 'jupiter-exchange-solana', img: 'https://assets.coingecko.com/coins/images/34188/large/jup.png' },
+            { id: 'inf', name: 'Infinity (SOL)', ticker: 'INF', cat: 'Cripto', plat: 'Infinity', qty: 6.66, price: 0, api_id: 'socean-staked-sol', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://sanctum.so&size=64' },
+            { id: 'hype', name: 'Hype Fund', ticker: 'HYPE', cat: 'Cripto', plat: 'Hype', qty: 744, price: 0, api_id: 'hyperliquid', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://hyperliquid.xyz&size=64' },
+            { id: 'hydra', name: 'Hydra', ticker: 'HYDRA', cat: 'Cripto', plat: 'Wallet', qty: 5, price: 0.40, api_id: 'hydra', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://hydrachain.org&size=64' },
+            { id: 'dep', name: 'Depioneers', ticker: 'DEP', cat: 'Cripto', plat: 'Wallet', qty: 431, price: 0.2, manual: true, img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://depioneers.com&size=64' },
+            { id: 'usdc', name: 'USDC', ticker: 'USDC', cat: 'Cripto', plat: 'Coinbase', qty: 1, price: 0.95, api_id: 'usd-coin', img: 'https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png' },
+
+            // Fondos de Indexa - Se actualizan dinámicamente vía API
+            { id: 'idx_1', name: 'Indexa Capital', ticker: 'IDX', cat: 'Fondos', plat: 'Indexa', qty: 1, price: 0, indexa_api: true, img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64' },
+
+            { id: 'myinv', name: 'Fondo MyInvestor', ticker: 'MYINV', cat: 'Fondos', plat: 'MyInv', qty: 2009, price: 0, yahoo: '0P0001CLDK.F', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://myinvestor.es&size=64' },
+            { id: 'gold', name: 'Oro / Gold', ticker: 'XAU', cat: 'Fondos', plat: 'MyInv', qty: 80, price: 0, yahoo: 'EGLN.L', img: 'https://img.icons8.com/color/96/gold-bars.png' },
+            { id: 'ing', name: 'Liquidez ING', ticker: 'EUR', cat: 'Cash', plat: 'ING', qty: 1, price: 2000, manual: true, img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://ing.es&size=64' },
+        ];
+
+        // Configuración del Proxy de Indexa
+        const INDEXA_PROXY_URL = 'http://localhost:8000';
+        let indexaConnected = false;
+
+        // Lógica de Tema
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+            updateThemeIcons();
+            render(); // Re-renderizar para actualizar el gráfico
+        }
+
+        function updateThemeIcons() {
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+            if (document.documentElement.classList.contains('dark')) {
+                darkIcon.classList.add('hidden');
+                lightIcon.classList.remove('hidden');
+            } else {
+                darkIcon.classList.remove('hidden');
+                lightIcon.classList.add('hidden');
+            }
+        }
+
+        let activeFilter = 'All';
+        let chartInstance = null;
+        let editTarget = null;
+        let usdToEur = 0.95;
+
+        const formatEUR = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+        const formatPrice = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(n);
+
+        function render() {
+            const tbody = document.getElementById('asset-table');
+            tbody.innerHTML = '';
+
+            let data = activeFilter === 'All' ? db : db.filter(i => i.cat === activeFilter);
+
+            // Calcular Totales Dinámicos
+            const currentTotal = data.reduce((acc, i) => acc + (i.price * i.qty), 0);
+
+            // Actualizar Header
+            document.getElementById('total-label').innerText = activeFilter === 'All' ? 'PATRIMONIO GLOBAL' : `VALOR ${activeFilter.toUpperCase()}`;
+            document.getElementById('global-total').innerText = formatEUR(currentTotal);
+            document.getElementById('asset-count').innerText = data.length;
+
+            data.sort((a, b) => (b.price * b.qty) - (a.price * a.qty));
+
+            data.forEach(item => {
+                const totalVal = item.price * item.qty;
+                // Porcentaje Relativo a la Vista Actual
+                const percent = currentTotal > 0 ? ((totalVal / currentTotal) * 100).toFixed(1) : 0;
+
+                let priceClass = "text-slate-900 dark:text-white font-medium";
+                let animClass = "";
+                if (item.lastRenderedPrice && item.price !== item.lastRenderedPrice) {
+                    animClass = item.price > item.lastRenderedPrice ? "animate-up" : "animate-down";
+                }
+                item.lastRenderedPrice = item.price;
+
+                let badge = `<span class="badge badge-manual" onclick="openEdit('${item.id}')">MANUAL</span>`;
+                if (item.indexa_api) badge = `<span class="badge badge-live" title="Conectado vía API">${indexaConnected ? 'LIVE' : 'OFFLINE'}</span>`;
+                else if (item.manual) badge = `<span class="badge badge-manual" onclick="openEdit('${item.id}')">EDIT</span>`;
+                else if (item.api_id) badge = `<span class="badge badge-live" onclick="openEdit('${item.id}')">CRYPTO</span>`;
+                else if (item.yahoo) badge = `<span class="badge badge-stock" onclick="openEdit('${item.id}')">STOCK</span>`;
+
+
+                let iconHtml;
+                const tickerLabel = (item.ticker || '???').substring(0, 3);
+                if (item.img) {
+                    iconHtml = `<img src="${item.img}" class="w-8 h-8 rounded-full asset-icon shadow-sm" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                <div class="w-8 h-8 rounded-lg bg-slate-700/50 hidden items-center justify-center text-[9px] font-bold text-slate-300 shrink-0 font-mono border border-slate-600/30">${tickerLabel}</div>`;
+                } else {
+                    iconHtml = `<div class="w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center text-[9px] font-bold text-slate-300 shrink-0 font-mono border border-slate-600/30">${tickerLabel}</div>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group border-b border-slate-200 dark:border-slate-700/30 last:border-0";
+                tr.innerHTML = `
+                    <td class="px-5 py-3.5">
+                        <div class="flex items-center gap-3">
+                            ${iconHtml}
+                            <div class="text-slate-900 dark:text-white font-semibold text-sm leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">${item.name}</div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3.5 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wide font-bold mb-1">${item.cat}</div>
+                        ${badge}
+                    </td>
+                    <td class="px-5 py-3.5 text-right">
+                        <div class="font-mono text-xs text-indigo-600 dark:text-indigo-300 font-bold">${percent}%</div>
+                        <div class="h-1 w-24 ml-auto bg-slate-200 dark:bg-slate-800 rounded-full mt-1 overflow-hidden">
+                             <div class="h-full bg-indigo-500 opacity-50" style="width: ${Math.min(parseFloat(percent) * 3, 100)}%"></div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3.5 text-right ${animClass}">
+                        <div class="mono text-sm ${priceClass}">${formatPrice(item.price)}</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-600 font-mono">${item.qty < 10 ? item.qty.toFixed(4) : item.qty.toFixed(0)} un.</div>
+                    </td>
+                    <td class="px-5 py-3.5 text-right">
+                        <div class="text-emerald-600 dark:text-emerald-400 font-bold text-sm mono tracking-tight">${formatEUR(totalVal)}</div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderChart(data, activeFilter);
+            renderTopList(data, currentTotal); // Pasar el total actual
+        }
+
+        async function updateMarkets() {
+            setLoading(true);
+            const proxyBase = "https://corsproxy.io/?";
+            const timeStamp = `&_=${new Date().getTime()}`;
+
+            try {
+                // 1. Obtener Ratio USD/EUR
+                try {
+                    const url = proxyBase + encodeURIComponent("https://query1.finance.yahoo.com/v8/finance/chart/EUR=X?interval=1d&range=1d") + timeStamp;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const rate = data.chart.result[0].meta.regularMarketPrice;
+                        if (rate) {
+                            usdToEur = rate;
+                            document.getElementById('usd-rate').innerText = `USD: ${usdToEur.toFixed(4)}`;
+                        }
+                    }
+                } catch (e) { console.error("Error USD/EUR:", e); }
+
+                // 2. Obtener Acciones (Yahoo Finance)
+                const stockPromises = db.filter(i => i.yahoo && !i.manual).map(async (item) => {
+                    try {
+                        const url = proxyBase + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${item.yahoo}?interval=1d&range=1d`) + timeStamp;
+                        const res = await fetch(url);
+                        if (res.ok) {
+                            const data = await res.json();
+                            let price = data.chart.result[0].meta.regularMarketPrice;
+                            if (item.currency === 'USD') price = price * usdToEur;
+                            if (price > 0) item.price = price;
+                        }
+                    } catch (e) { console.error(`Error Yahoo ${item.id}:`, e); }
+                });
+                await Promise.all(stockPromises);
+
+                // 3. Obtener Criptos (CoinGecko)
+                const ids = db.filter(i => i.api_id && !i.manual).map(i => i.api_id).join(',');
+                if (ids) {
+                    try {
+                        const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=eur${timeStamp}`);
+                        const d = await res.json();
+                        db.forEach(item => {
+                            if (item.api_id && d[item.api_id] && !item.manual) {
+                                item.price = d[item.api_id].eur;
+                            }
+                        });
+                    } catch (e) { console.error("Error CoinGecko:", e); }
+                }
+
+                // 4. Obtener Indexa Capital
+                await updateIndexa();
+
+            } catch (e) {
+                console.error("Error global en updateMarkets:", e);
+            } finally {
+                try { render(); } catch (re) { console.error("Error in render:", re); }
+                setLoading(false);
+            }
+        }
+
+        async function updateIndexa() {
+            /**
+             * Conecta con el proxy local para obtener datos de Indexa Capital.
+             * El proxy lee el token del Keychain de macOS de forma segura.
+             */
+            try {
+                const res = await fetch(`${INDEXA_PROXY_URL}/api/indexa/accounts`);
+                if (!res.ok) {
+                    const errText = await res.text();
+                    try {
+                        const errJson = JSON.parse(errText);
+                        throw new Error(errJson.error || `Error ${res.status}`);
+                    } catch (parseErr) {
+                        throw new Error(`Error ${res.status}`);
+                    }
+                }
+
+                const data = await res.json();
+
+                if (data.success && data.accounts && data.accounts.length > 0) {
+                    indexaConnected = true;
+
+                    // Eliminar el placeholder de Indexa
+                    const placeholderIndex = db.findIndex(i => i.id === 'idx_1');
+                    if (placeholderIndex !== -1) {
+                        db.splice(placeholderIndex, 1);
+                    }
+
+                    // Añadir cada cuenta de Indexa como un activo separado
+                    data.accounts.forEach((account, index) => {
+                        const existingIndex = db.findIndex(i => i.id === `idx_${account.account_number}`);
+
+                        const assetData = {
+                            id: `idx_${account.account_number}`,
+                            name: account.name,
+                            ticker: 'IDX',
+                            cat: 'Fondos',
+                            plat: 'Indexa',
+                            qty: 1,
+                            price: account.market_value,
+                            indexa_api: true,
+                            risk_profile: account.risk_profile,
+                            variation_pct: account.variation_pct,
+                            img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64'
+                        };
+
+                        if (existingIndex !== -1) {
+                            db[existingIndex] = assetData;
+                        } else {
+                            db.push(assetData);
+                        }
+                    });
+
+                    console.log(`✅ Indexa: ${data.accounts.length} cuentas cargadas (Total: ${data.total_value.toFixed(2)}€)`);
+                }
+            } catch (e) {
+                console.error("Error conectando con proxy Indexa:", e);
+                indexaConnected = false;
+
+                // Si no hay datos de Indexa, mostrar placeholder con valor 0
+                const hasIndexa = db.some(i => i.indexa_api && i.price > 0);
+                if (!hasIndexa) {
+                    const placeholder = db.find(i => i.id === 'idx_1');
+                    if (placeholder) {
+                        // Mostrar el error específico (ej: "Offline", "Error 500", "Timeout")
+                        let cleanError = e.message.replace("Error conectando con proxy Indexa:", "").trim();
+                        if (cleanError === "Failed to fetch") cleanError = "Sin Conexión";
+                        placeholder.name = `Indexa (${cleanError})`;
+                        placeholder.price = 0;
+                    }
+                }
+            }
+        }
+
+
+        function setLoading(loading) {
+            const icon = document.getElementById('refresh-icon');
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            if (loading) {
+                icon.classList.add('spin');
+                dot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
+                text.innerText = "ACTUALIZANDO...";
+                text.classList.add("text-yellow-500");
+            } else {
+                icon.classList.remove('spin');
+                dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                text.innerText = "ACTUALIZADO";
+                text.classList.remove("text-yellow-500");
+                text.classList.add("text-emerald-500");
+                setTimeout(() => {
+                    text.classList.remove("text-emerald-500");
+                    text.classList.add("text-slate-500");
+                }, 3000);
+            }
+        }
+
+        function renderChart(data, mode) {
+            if (typeof Chart === 'undefined') return;
+            const canvas = document.getElementById('mainChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let labels = [], points = [], colors = [];
+
+            // Paleta vibrante y variada
+            const vibrantPalette = [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#42f59e', '#f542e6', '#ecf542', '#42e9f5',
+                '#f54242', '#a1f542', '#4242f5', '#f5a142', '#42f542'
+            ];
+
+            if (mode === 'All') {
+                const groups = { 'Acciones': 0, 'Cripto': 0, 'Fondos': 0, 'Cash': 0 };
+                db.forEach(i => { if (groups[i.cat] !== undefined) groups[i.cat] += i.price * i.qty; });
+                labels = Object.keys(groups); points = Object.values(groups);
+                colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899'];
+            } else {
+                const sorted = [...data].sort((a, b) => (b.price * b.qty) - (a.price * a.qty));
+                const top = sorted.slice(0, 10);
+                const otherVal = sorted.slice(10).reduce((acc, i) => acc + (i.price * i.qty), 0);
+                labels = top.map(i => i.name);
+                points = top.map(i => i.price * i.qty);
+                if (otherVal > 0) { labels.push('Otros'); points.push(otherVal); }
+
+                // Generar colores variados basados en la paleta vibrante
+                colors = labels.map((_, i) => vibrantPalette[i % vibrantPalette.length]);
+            }
+            const isDark = document.documentElement.classList.contains('dark');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data: points, backgroundColor: colors, borderWidth: 0 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 8,
+                                color: isDark ? '#94a3b8' : '#64748b',
+                                font: { size: 9 }
+                            }
+                        }
+                    },
+                    cutout: '70%',
+                    animation: { duration: 500 }
+                }
+            });
+        }
+
+        function renderTopList(data, totalValue) {
+            const list = document.getElementById('top-assets-list');
+            list.innerHTML = '';
+            data.slice(0, 5).forEach(i => {
+                const val = i.price * i.qty;
+                const pct = totalValue > 0 ? ((val / totalValue) * 100).toFixed(1) : 0;
+                list.innerHTML += `
+                    <div class="flex justify-between items-center text-xs p-2 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <span class="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[100px]">${i.name}</span>
+                        <div class="text-right">
+                            <span class="text-slate-900 dark:text-white font-mono font-bold block">${formatEUR(val)}</span>
+                            <span class="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold">${pct}%</span>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function setFilter(f) {
+            activeFilter = f;
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.className = "filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors";
+            });
+            const active = document.getElementById('btn-' + f);
+            let color = "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm";
+            if (f === 'Cripto') color = "bg-purple-600 text-white shadow-lg shadow-purple-500/30";
+            if (f === 'Acciones') color = "bg-blue-600 text-white shadow-lg shadow-blue-500/30";
+            if (f === 'Fondos') color = "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30";
+            active.className = `filter-btn px-6 py-1.5 rounded-full text-xs font-bold transform scale-105 active ${color}`;
+            render();
+        }
+
+        function openEdit(id) {
+            editTarget = db.find(i => i.id === id);
+            if (editTarget) {
+                document.getElementById('manual-price').value = editTarget.price;
+                document.getElementById('manual-qty').value = editTarget.qty;
+                document.getElementById('editModal').classList.remove('hidden');
+                document.getElementById('editModal').classList.add('flex');
+            }
+        }
+        function closeModal() { document.getElementById('editModal').classList.add('hidden'); document.getElementById('editModal').classList.remove('flex'); editTarget = null; }
+
+        function saveManual() {
+            if (editTarget) {
+                editTarget.price = parseFloat(document.getElementById('manual-price').value);
+                editTarget.qty = parseFloat(document.getElementById('manual-qty').value);
+                editTarget.manual = true;
+                render();
+                closeModal();
+            }
+        }
+
+        updateThemeIcons();
+        render();
+        setTimeout(updateMarkets, 1000);
+
+    </script>
+</body>
+
+</html>

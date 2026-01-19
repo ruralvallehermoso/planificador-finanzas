@@ -1,0 +1,53 @@
+INFO:     Started server process [10363]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53611 - "GET /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53701 - "GET /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53715 - "GET /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53715 - "GET /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53746 - "GET /api/assets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53746 - "GET /api/indexa/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53752 - "GET /api/assets/changes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53758 - "GET /api/assets/changes?min_value=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53758 - "GET /api/portfolio/history?period=1m&category=Fondos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53782 - "GET /api/assets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53754 - "GET /api/portfolio/history?period=7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53755 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53759 - "GET /api/portfolio/history?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53755 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53755 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53755 - "GET /api/portfolio/history?period=7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53755 - "OPTIONS /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53759 - "POST /api/portfolio/status HTTP/1.1" 200 OK
+✅ Indexa total value: 201531.36€
+INFO:     127.0.0.1:53782 - "GET /api/indexa/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53746 - "POST /api/markets/update HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53794 - "GET /api/assets/changes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53800 - "GET /api/assets/changes?min_value=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53800 - "GET /api/portfolio/history?period=1m&category=Fondos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53796 - "GET /api/portfolio/history?period=7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53801 - "GET /api/portfolio/history?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+✅ Indexa total value: 201531.36€
+INFO:     127.0.0.1:53782 - "POST /api/markets/update HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/portfolio/history?period=7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "OPTIONS /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53782 - "POST /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54444 - "GET /api/assets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54444 - "GET /api/indexa/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54451 - "GET /api/assets/changes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54456 - "GET /api/assets/changes?min_value=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54456 - "GET /api/portfolio/history?period=1m&category=Fondos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54454 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54452 - "GET /api/portfolio/history?period=7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54458 - "GET /api/portfolio/history?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54454 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54454 - "GET /api/portfolio/performance?period=24h HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54454 - "GET /api/portfolio/history?period=7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54454 - "OPTIONS /api/portfolio/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54458 - "POST /api/portfolio/status HTTP/1.1" 200 OK
+✅ Indexa total value: 201531.36€
+INFO:     127.0.0.1:54444 - "POST /api/markets/update HTTP/1.1" 200 OK

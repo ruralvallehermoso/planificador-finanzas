@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio Master - App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+    </style>
+    <script>
+      // Aplicar tema antes de pintar
+      if (
+        localStorage.getItem("color-theme") === "dark" ||
+        (!("color-theme" in localStorage) &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    </script>
+  </head>
+  <body
+    class="h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-[#0b1120]"
+  >
+    <div
+      class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 shrink-0 z-20 shadow-sm"
+    >
+      <div
+        class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4"
+      >
+        <div class="flex items-center gap-4">
+          <div
+            class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/30"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              />
+            </svg>
+          </div>
+          <div>
+            <h1
+              class="text-slate-900 dark:text-white font-bold leading-tight tracking-tight text-lg"
+            >
+              Master Portfolio (App)
+            </h1>
+            <div
+              class="flex items-center gap-2 text-[10px] font-bold tracking-wider mt-0.5 cursor-pointer hover:text-indigo-600 dark:hover:text-white group"
+              id="status-area"
+            >
+              <span
+                class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500"
+                id="status-dot"
+              ></span>
+              <span
+                class="text-slate-500 group-hover:text-inherit"
+                id="status-text"
+                >LISTO</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex bg-slate-100 dark:bg-slate-800 rounded-full p-1 gap-1 border border-slate-200 dark:border-slate-700/50"
+        >
+          <button
+            data-filter="All"
+            class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+          >
+            TODO
+          </button>
+          <button
+            data-filter="Cripto"
+            class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          >
+            CRIPTO
+          </button>
+          <button
+            data-filter="Acciones"
+            class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          >
+            ACCIONES
+          </button>
+          <button
+            data-filter="Fondos"
+            class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          >
+            FONDOS
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button
+            id="theme-toggle"
+            class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white border border-slate-200 dark:border-slate-700"
+            title="Cambiar Tema"
+          >
+            <svg
+              id="theme-toggle-dark-icon"
+              class="hidden w-5 h-5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+              ></path>
+            </svg>
+            <svg
+              id="theme-toggle-light-icon"
+              class="hidden w-5 h-5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+          </button>
+
+          <button
+            id="refresh-button"
+            class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white border border-slate-200 dark:border-slate-700"
+            title="Forzar Actualización"
+          >
+            <svg
+              id="refresh-icon"
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+
+          <div class="text-right min-w-[160px]">
+            <p
+              class="text-[10px] text-slate-500 uppercase tracking-widest font-bold"
+              id="total-label"
+            >
+              PATRIMONIO GLOBAL
+            </p>
+            <p
+              class="text-3xl font-bold text-slate-900 dark:text-white mono tracking-tighter"
+              id="global-total"
+            >
+              ---
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-hidden relative">
+      <div
+        class="max-w-7xl mx-auto h-full grid grid-cols-1 lg:grid-cols-3 gap-0 lg:divide-x lg:divide-slate-200 dark:lg:divide-slate-800/50"
+      >
+        <div
+          class="lg:col-span-2 h-full overflow-y-auto p-4 md:p-6 bg-slate-50 dark:bg-[#0b1120]"
+        >
+          <div class="flex justify-between items-end mb-4 px-1">
+            <h2
+              class="text-slate-800 dark:text-white font-bold text-lg tracking-tight"
+              id="list-title"
+            >
+              Cartera de Activos
+            </h2>
+            <div class="text-xs text-slate-500 font-mono text-right">
+              <span id="asset-count">0</span> items<br />
+              <span
+                id="usd-rate"
+                class="text-[10px] text-slate-400 dark:text-slate-600"
+                >USD: ...</span
+              >
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <table class="w-full text-left text-sm">
+              <thead
+                class="bg-slate-100/90 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider sticky top-0 z-10 backdrop-blur-sm shadow-sm"
+              >
+                <tr>
+                  <th class="px-5 py-3">Activo</th>
+                  <th class="px-5 py-3 text-center">Tipo</th>
+                  <th class="px-5 py-3 text-right">Peso (%)</th>
+                  <th class="px-5 py-3 text-right">Precio</th>
+                  <th class="px-5 py-3 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody id="asset-table" class="divide-y divide-slate-200 dark:divide-slate-700/30"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div
+          class="lg:col-span-1 h-full bg-white dark:bg-slate-900/30 p-4 md:p-6 flex flex-col overflow-y-auto border-l border-slate-200 dark:border-slate-800"
+        >
+          <div
+            class="mb-6 bg-slate-50 dark:bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700/30 shadow-inner"
+          >
+            <div class="flex justify-between items-center mb-4">
+              <h3
+                class="text-slate-500 dark:text-slate-300 text-xs uppercase font-bold tracking-wider"
+                id="chart-title"
+              >
+                Distribución
+              </h3>
+            </div>
+            <div class="relative h-56">
+              <canvas id="mainChart"></canvas>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3
+              class="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider px-1"
+            >
+              Top Movers (Por Peso)
+            </h3>
+            <div id="top-assets-list" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal edición -->
+    <div
+      id="editModal"
+      class="fixed inset-0 bg-black/60 dark:bg-black/90 hidden items-center justify-center z-50 backdrop-blur-sm"
+    >
+      <div
+        class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-600 w-80 shadow-2xl"
+      >
+        <h3 class="text-slate-900 dark:text-white font-bold text-lg mb-1">
+          Ajuste Manual
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">
+          Edita la
+          <span class="font-bold text-slate-800 dark:text-white">CANTIDAD</span>
+          o el PRECIO.
+        </p>
+        <label
+          class="text-[10px] uppercase text-slate-400 dark:text-slate-500 font-bold"
+          >Cantidad (Tokens/Acciones)</label
+        >
+        <input
+          type="number"
+          step="any"
+          id="manual-qty"
+          class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white p-2 rounded-lg font-mono mb-2 outline-none focus:border-indigo-500"
+        />
+        <label
+          class="text-[10px] uppercase text-slate-400 dark:text-slate-500 font-bold"
+          >Precio Unitario (€)</label
+        >
+        <input
+          type="number"
+          step="any"
+          id="manual-price"
+          class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white p-2 rounded-lg font-mono mb-4 outline-none focus:border-indigo-500"
+        />
+        <div class="flex justify-end gap-2">
+          <button
+            id="cancel-edit"
+            class="px-4 py-2 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700"
+          >
+            Cancelar
+          </button>
+          <button
+            id="save-edit"
+            class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold"
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
+
+

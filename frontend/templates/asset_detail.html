@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalle {{ asset_name }} - Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = { darkMode: "class" };
+      if (
+        localStorage.getItem("color-theme") === "dark" ||
+        (!("color-theme" in localStorage) &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-100">
+    <div class="max-w-5xl mx-auto px-4 py-6">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            Detalle de activo
+          </p>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight mt-1">
+            {{ asset_name }}
+          </h1>
+        </div>
+        <a
+          href="/"
+          class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          ← Volver a la cartera
+        </a>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <div class="col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+          <h2 class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">
+            Histórico 5 años (EUR)
+          </h2>
+          <div class="h-72">
+            <canvas id="historyChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col gap-2 text-sm" id="asset-meta">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            Snapshot actual
+          </p>
+          <div class="mono text-2xl font-bold" id="asset-price">—</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400" id="asset-updated">
+            Cargando...
+          </div>
+          <div class="border-t border-slate-200 dark:border-slate-800 my-2"></div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <p class="text-slate-500 dark:text-slate-400">Ticker</p>
+              <p class="font-semibold mono" id="asset-ticker">—</p>
+            </div>
+            <div>
+              <p class="text-slate-500 dark:text-slate-400">Categoría</p>
+              <p class="font-semibold" id="asset-category">—</p>
+            </div>
+            <div>
+              <p class="text-slate-500 dark:text-slate-400">Plataforma</p>
+              <p class="font-semibold" id="asset-platform">—</p>
+            </div>
+            <div>
+              <p class="text-slate-500 dark:text-slate-400">Cantidad</p>
+              <p class="font-semibold mono" id="asset-qty">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const assetId = "{{ asset_id }}";
+
+      const formatEUR = (n) =>
+        new Intl.NumberFormat("es-ES", {
+          style: "currency",
+          currency: "EUR",
+          maximumFractionDigits: 2,
+        }).format(n);
+
+      async function loadDetail() {
+        const res = await fetch(`/api/assets/${encodeURIComponent(assetId)}`);
+        const data = await res.json();
+
+        document.getElementById("asset-price").innerText = formatEUR(
+          data.price_eur || 0
+        );
+        document.getElementById("asset-ticker").innerText = data.ticker || "—";
+        document.getElementById("asset-category").innerText = data.category;
+        document.getElementById("asset-platform").innerText = data.platform || "—";
+        document.getElementById("asset-qty").innerText = (data.quantity || 0).toString();
+
+        if (data.history && data.history.length) {
+          document.getElementById("asset-updated").innerText =
+            "Último punto: " + data.history[data.history.length - 1].date;
+          renderHistoryChart(data.history);
+        } else {
+          document.getElementById("asset-updated").innerText =
+            "Sin histórico disponible todavía.";
+          const histRes = await fetch(
+            `/api/assets/${encodeURIComponent(assetId)}/history`
+          );
+          const hist = await histRes.json();
+          if (hist.length) {
+            document.getElementById("asset-updated").innerText =
+              "Último punto: " + hist[hist.length - 1].date;
+            renderHistoryChart(hist);
+          }
+        }
+      }
+
+      function renderHistoryChart(history) {
+        const ctx = document.getElementById("historyChart").getContext("2d");
+        const labels = history.map((p) => p.date);
+        const values = history.map((p) => p.price_eur);
+        const isDark = document.documentElement.classList.contains("dark");
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Precio (EUR)",
+                data: values,
+                borderColor: "#6366f1",
+                backgroundColor: "rgba(99,102,241,0.1)",
+                borderWidth: 1.5,
+                pointRadius: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: {
+                  maxTicksLimit: 6,
+                  color: isDark ? "#94a3b8" : "#64748b",
+                },
+                grid: { display: false },
+              },
+              y: {
+                ticks: {
+                  color: isDark ? "#94a3b8" : "#64748b",
+                },
+                grid: {
+                  color: isDark ? "rgba(30,41,59,0.8)" : "rgba(148,163,184,0.4)",
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                labels: {
+                  color: isDark ? "#e2e8f0" : "#0f172a",
+                },
+              },
+            },
+          },
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", loadDetail);
+      } else {
+        loadDetail();
+      }
+    </script>
+  </body>
+</html>
+
+
+
+
