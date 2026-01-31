@@ -40,8 +40,16 @@ async def lifespan(app: FastAPI):
                 # Update logic: If asset exists, check if we need to force update (Manual assets like ING)
                 if asset_data.id in current:
                     existing = current[asset_data.id]
-                    # Specific check for ING or manual assets to force price/quantity update from seed
-                    if asset_data.manual or asset_data.id == "ing":
+                    
+                    # FORCE UPDATE ING to 15000 unconditionally
+                    if asset_data.id == "ing":
+                         print(f"🔥 FORCE UPDATING ING: {existing.price_eur} -> {asset_data.price_eur}")
+                         existing.price_eur = asset_data.price_eur
+                         existing.quantity = asset_data.quantity
+                         db.commit()
+                         
+                    # Specific check for other manual assets
+                    elif asset_data.manual:
                          if existing.price_eur != asset_data.price_eur or existing.quantity != asset_data.quantity:
                              print(f"🔄 Updating Manual Asset {asset_data.id}: {existing.price_eur} -> {asset_data.price_eur}")
                              existing.price_eur = asset_data.price_eur
