@@ -734,3 +734,18 @@ def sync_indexa_history(db: Session = Depends(get_db)):
         return {"success": True, "points": total_points_saved, "accounts_synced": list(accounts.keys())}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+@app.get("/api/debug/force_ing_15000")
+def force_ing_15000(db: Session = Depends(get_db)):
+    """Force update ING asset to 15000"""
+    try:
+        asset = crud.get_asset(db, "ing")
+        if asset:
+            asset.price_eur = 15000.0
+            asset.quantity = 1.0
+            db.commit()
+            return {"success": True, "message": "ING updated to 15000", "asset": {"id": asset.id, "price": asset.price_eur, "qty": asset.quantity}}
+        else:
+            return {"success": False, "error": "ING asset not found"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
