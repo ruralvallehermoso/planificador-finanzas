@@ -359,7 +359,7 @@ def get_initial_assets() -> list[schemas.AssetCreate]:
             ticker="EUR",
             category="Cash",
             platform="ING",
-            quantity=0,
+            quantity=1,
             price_eur=15000,
             manual=True,
             image_url="https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://ing.es&size=64",
