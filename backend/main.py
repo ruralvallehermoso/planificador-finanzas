@@ -4,13 +4,15 @@ from datetime import date
 from typing import List, Optional
 import sys
 import os
+from contextlib import asynccontextmanager
 
 # Core Imports
 try:
     import database
-    from database import SessionLocal, get_db
+    from database import SessionLocal, get_db, Base, engine
     from sqlalchemy.orm import Session
     import crud, models, schemas
+    import seed_data 
 except Exception as e:
     print(f"❌ Core Import Error: {e}")
 
@@ -20,7 +22,52 @@ try:
 except Exception as e:
     print(f"❌ Simulator Import Error: {e}")
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🚀 Backend lifespan starting...")
+    try:
+        # 1. Initialize DB
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables created/verified")
+        
+        # 2. Sync Seed Data (Force Update Manual Assets)
+        db = SessionLocal()
+        try:
+            initial = seed_data.get_initial_assets()
+            current = {a.id: a for a in crud.get_assets(db)}
+            
+            for asset_data in initial:
+                # Update logic: If asset exists, check if we need to force update (Manual assets like ING)
+                if asset_data.id in current:
+                    existing = current[asset_data.id]
+                    # Specific check for ING or manual assets to force price/quantity update from seed
+                    if asset_data.manual or asset_data.id == "ing":
+                         if existing.price_eur != asset_data.price_eur or existing.quantity != asset_data.quantity:
+                             print(f"🔄 Updating Manual Asset {asset_data.id}: {existing.price_eur} -> {asset_data.price_eur}")
+                             existing.price_eur = asset_data.price_eur
+                             existing.quantity = asset_data.quantity
+                             db.commit()
+                else:
+                    # Create if missing
+                    print(f"🌱 Adding missing asset: {asset_data.id}")
+                    crud.create_asset_direct(db, asset_data)
+            
+            # Commit any changes
+            db.commit()
+            print("✅ Seed data synced successfully")
+            
+        except Exception as seed_err:
+             print(f"⚠️ Seed sync warning: {seed_err}")
+        finally:
+             db.close()
+             
+    except Exception as e:
+        print(f"❌ Lifespan Error: {e}")
+        
+    yield
+    print("🛑 Backend lifespan ending...")
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
