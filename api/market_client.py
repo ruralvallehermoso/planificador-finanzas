@@ -72,6 +72,7 @@ def fetch_yahoo_prices(symbols: Dict[str, str], usd_to_eur: float | None = None)
     return prices
 
 
+
 def fetch_coingecko_prices(ids: Dict[str, str]) -> Dict[str, float]:
     """
     ids: {asset_id: coingecko_id}
@@ -94,7 +95,52 @@ def fetch_coingecko_prices(ids: Dict[str, str]) -> Dict[str, float]:
             if price is not None:
                 prices[asset_id] = float(price)
         return prices
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ CoinGecko Price Error: {e}")
+        return {}
+
+
+def fetch_cryptocompare_prices(symbols: Dict[str, str]) -> Dict[str, float]:
+    """
+    symbols: {asset_id: ticker} (e.g. {"btc_id": "BTC"})
+    Devuelve {asset_id: price_eur}
+    Usa la API de CryptoCompare (pricemulti).
+    """
+    if not symbols:
+        return {}
+        
+    try:
+        # CryptoCompare fsyms limit is ~300 chars, usually enough for 20-30 coins.
+        # If we have many, we should batch. For now assume < 30 coins.
+        unique_tickers = list(set(sym.upper() for sym in symbols.values()))
+        ticker_str = ",".join(unique_tickers)
+        
+        url = "https://min-api.cryptocompare.com/data/pricemulti"
+        params = {
+            "fsyms": ticker_str,
+            "tsyms": "EUR"
+        }
+        
+        res = requests.get(url, params=params, headers=DEFAULT_HEADERS, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+        
+        # CryptoCompare structure: {"BTC": {"EUR": 50000}, "ETH": {"EUR": 3000}}
+        if data.get("Response") == "Error":
+             print(f"⚠️ CryptoCompare API Error: {data.get('Message')}")
+             return {}
+             
+        prices: Dict[str, float] = {}
+        for asset_id, ticker in symbols.items():
+            t_upper = ticker.upper()
+            if t_upper in data:
+                price = data[t_upper].get("EUR")
+                if price is not None:
+                    prices[asset_id] = float(price)
+        
+        return prices
+    except Exception as e:
+        print(f"⚠️ CryptoCompare Price Error: {e}")
         return {}
 
 

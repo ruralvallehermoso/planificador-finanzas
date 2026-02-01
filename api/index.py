@@ -90,7 +90,7 @@ def root():
 
 @app.get("/api/sanity")
 def sanity():
-    return {"status": "alive", "version": "v7-CHANGES-RESTORED", "timestamp": "CHECK_DEBUG_DEPLOY_3", "mode": "full_code"}
+    return {"status": "alive", "version": "v8-CRYPTO-FIX", "timestamp": "CHECK_DEBUG_DEPLOY_4", "mode": "full_code"}
 
 @app.get("/api/health")
 def health_check():
@@ -197,10 +197,22 @@ def update_markets(db: Session = Depends(get_db)):
         yahoo_symbols = {a.id: a.yahoo_symbol for a in assets if a.yahoo_symbol and not a.manual}
         yahoo_prices = market_client.fetch_yahoo_prices(yahoo_symbols, usd_to_eur=usd_to_eur)
         
-        # 3. Criptos (CoinGecko)
+        # 3. Criptos (CoinGecko + CryptoCompare Fallback)
         cg_ids = {a.id: a.coingecko_id for a in assets if a.coingecko_id and not a.manual}
         cg_prices = market_client.fetch_coingecko_prices(cg_ids)
         
+        # Identify missing prices to fallback
+        missing_crypto_assets = {
+            a.id: a.ticker 
+            for a in assets 
+            if a.coingecko_id and not a.manual and a.id not in cg_prices and a.ticker
+        }
+        
+        if missing_crypto_assets:
+            print(f"⚠️ Fallback to CryptoCompare for {len(missing_crypto_assets)} assets: {list(missing_crypto_assets.values())}")
+            cc_prices = market_client.fetch_cryptocompare_prices(missing_crypto_assets)
+            cg_prices.update(cc_prices)
+
         # 4. Indexa - Update both total (idx_1) and individual accounts
         indexa_data = market_client.fetch_indexa_accounts()
         indexa_prices = {}
