@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import sys
 import os
 from contextlib import asynccontextmanager
@@ -228,7 +228,6 @@ def get_portfolio_performance(
 def save_portfolio_status(status: Dict[str, Any]):
     # Dummy endpoint to satisfy frontend
     return {"status": "saved", "timestamp": "dummy"}
-from typing import Dict, Any
 @app.post("/api/simulator/compare", response_model=Dict[str, Any])
 def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depends(get_db)):
     """Compara el rendimiento de la cartera vs el coste de la hipoteca"""
