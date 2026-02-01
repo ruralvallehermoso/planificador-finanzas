@@ -5,7 +5,7 @@ app = FastAPI()
 
 @app.get("/api/sanity")
 def sanity():
-    return {"status": "alive", "version": "v3-EXPLICIT-BUILD", "python": sys.version}
+    return {"status": "alive", "version": "v4-NUCLEAR", "python": sys.version}
 
 @app.get("/api/{full_path:path}")
 def catch_all(full_path: str):
