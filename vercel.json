@@ -1,24 +1,12 @@
-    "builds": [
+{
+    "rewrites": [
         {
-            "src": "backend/minimal.py",
-            "use": "@vercel/python"
+            "source": "/api/(.*)",
+            "destination": "/api/index.py"
         },
         {
-            "src": "frontend/dashboard/package.json",
-            "use": "@vercel/static-build",
-            "config": {
-                "distDir": "dist"
-            }
-        }
-    ],
-    "routes": [
-        {
-            "src": "/api/(.*)",
-            "dest": "backend/minimal.py"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "frontend/dashboard/$1"
+            "source": "/(.*)",
+            "destination": "/frontend/dashboard/$1"
         }
     ]
 }
