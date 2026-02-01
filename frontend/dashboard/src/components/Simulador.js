@@ -258,6 +258,7 @@ function renderSimulatorResults(data) {
     } else {
         debugEl.innerHTML = `<span style="color:red">NULL</span> <br>Today: ${data.server_today}`;
         console.log("SIM DEBUG LOG:", data.debug_log);
+        console.log("BACKEND DEBUG:", data.backend_debug);
     }
 
     // UI color styling

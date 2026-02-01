@@ -622,6 +622,13 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
                 "basis": basis,
                 "diff": diff if 'diff' in locals() else 0,
                 "initial_history_val": initial_history_val if 'initial_history_val' in locals() else 0
+            },
+            "backend_debug": {
+                 "server_today": str(date.today()),
+                 "schedule_exists": bool(schedule),
+                 "schedule_len": len(schedule) if schedule else 0,
+                 "first_date": schedule[0]['date'] if schedule else "None",
+                 "comparison_keys": list(comparison.keys())
             }
         }
     except Exception as e:
