@@ -223,6 +223,11 @@ def get_portfolio_performance(
         change_absolute=round(change_abs, 2),
         period=period
     )
+
+@app.post("/api/portfolio/status")
+def save_portfolio_status(status: Dict[str, Any]):
+    # Dummy endpoint to satisfy frontend
+    return {"status": "saved", "timestamp": "dummy"}
 from typing import Dict, Any
 @app.post("/api/simulator/compare", response_model=Dict[str, Any])
 def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depends(get_db)):
