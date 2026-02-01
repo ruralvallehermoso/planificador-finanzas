@@ -1,6 +1,6 @@
     "builds": [
         {
-            "src": "backend/api.py",
+            "src": "backend/minimal.py",
             "use": "@vercel/python"
         },
         {
@@ -14,7 +14,7 @@
     "routes": [
         {
             "src": "/api/(.*)",
-            "dest": "backend/api.py"
+            "dest": "backend/minimal.py"
         },
         {
             "src": "/(.*)",
