@@ -253,7 +253,7 @@ export function createSimulatorView() {
  * Setup listeners for simulator
  */
 export function setupSimulatorListeners() {
-    constbtn = document.getElementById('calculate-simulator');
+    const btn = document.getElementById('calculate-simulator');
     if (btn) {
         btn.addEventListener('click', () => {
             updateSimulator();
