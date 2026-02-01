@@ -90,7 +90,7 @@ def root():
 
 @app.get("/api/sanity")
 def sanity():
-    return {"status": "alive", "version": "v8-CRYPTO-FIX", "timestamp": "CHECK_DEBUG_DEPLOY_4", "mode": "full_code"}
+    return {"status": "alive", "version": "v9-SIM-DEBUG", "timestamp": "CHECK_DEBUG_DEPLOY_5", "mode": "full_code"}
 
 @app.get("/api/health")
 def health_check():

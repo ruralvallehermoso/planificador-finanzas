@@ -154,6 +154,7 @@ def compare_mortgage_vs_portfolio(
                     if item_date <= today:
                         total_interest_paid = item["cumulative_interest"]
                         last_paid_date = item_date
+                        print(f"💰 Mortgage Payment Detected: {item_date} | Cum Interest: {total_interest_paid}")
                     else:
                         break
                 except Exception as e:
