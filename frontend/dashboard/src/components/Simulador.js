@@ -1,21 +1,100 @@
-/**
- * Simulator component - Interactive mortgage vs investment analysis
- */
-import { Chart } from 'chart.js';
-import { formatEUR, formatPercent } from '../utils/formatters.js';
-import { BACKEND_URL } from '../config.js';
 
-let simulatorChartInstance = null;
+let currentSimData = null;
 
 /**
  * Create simulator view container HTML
  */
 export function createSimulatorView() {
     return `
+    <style>
+      .metric-card.interactive {
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+          position: relative;
+          border: 1px solid transparent;
+      }
+      .metric-card.interactive:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+          border-color: var(--primary);
+      }
+      .metric-card.interactive::after {
+          content: '👆 Ver detalle';
+          position: absolute;
+          bottom: 4px;
+          right: 8px;
+          font-size: 0.65rem;
+          color: var(--primary);
+          opacity: 0;
+          transition: opacity 0.2s;
+          font-weight: bold;
+      }
+      .metric-card.interactive:hover::after {
+          opacity: 1;
+      }
+      
+      /* Detail Modal Styles */
+      .detail-section {
+          margin-bottom: 20px;
+          padding: 15px;
+          background: var(--bg-main);
+          border-radius: 8px;
+      }
+      .detail-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid var(--border-color);
+      }
+      .detail-row.total {
+          font-weight: bold;
+          border-top: 2px solid var(--border-color);
+          border-bottom: double var(--border-color);
+          margin-top: 10px;
+          font-size: 1.1em;
+      }
+      .detail-explanation {
+          font-size: 0.85em;
+          color: var(--text-muted);
+          margin-bottom: 15px;
+          font-style: italic;
+          line-height: 1.5;
+      }
+      .detail-table {
+          width: 100%;
+          font-size: 0.8rem;
+          border-collapse: collapse;
+      }
+      .detail-table th {
+          text-align: left;
+          background: var(--bg-card);
+          padding: 8px;
+          position: sticky;
+          top: 0;
+      }
+      .detail-table td {
+          padding: 6px 8px;
+          border-bottom: 1px solid var(--border-color);
+      }
+      .badge-math {
+          display: inline-block;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-size: 0.7em;
+          font-weight: bold;
+          margin-right: 8px;
+          width: 24px;
+          text-align: center;
+      }
+      .bg-plus { background: #dcfce7; color: #166534; }
+      .bg-minus { background: #fee2e2; color: #991b1b; }
+      .bg-equals { background: #e0e7ff; color: #3730a3; }
+    </style>
+
     <div class="simulator-container">
         <div class="simulator-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <h2 class="simulator-title">Simulador: Inversión vs Deuda <span style="font-size: 0.6em; color: #94a3b8; font-weight: normal;">(v1.7)</span></h2>
+                <h2 class="simulator-title">Simulador: Inversión vs Deuda <span style="font-size: 0.6em; color: #94a3b8; font-weight: normal;">(v1.9-INTERACTIVE)</span></h2>
                 <p class="simulator-subtitle">Compara si es más rentable mantener tu inversión o amortizar la hipoteca.</p>
             </div>
             <button id="open-config-btn" class="btn-secondary">
@@ -35,11 +114,12 @@ export function createSimulatorView() {
                         <span class="metric-label">Valor Actual Cartera</span>
                         <span class="metric-value" id="sim-portfolio-value">--</span>
                     </div>
-                    <div class="metric-card">
+                    <div class="metric-card interactive" id="sim-mortgage-card">
                         <span class="metric-label">Coste Hipoteca (Intereses)</span>
                         <span class="metric-value" id="sim-mortgage-cost">--</span>
+                        <div style="font-size:0.6rem; color:#64748b; margin-top:4px;">Haz clic para ver desglose</div>
                     </div>
-                    <div class="metric-card" id="sim-net-card">
+                    <div class="metric-card interactive" id="sim-net-card">
                         <span class="metric-label">Ganancia Neta Operación</span>
                         <span class="metric-value" id="sim-net-balance">--</span>
                         <span class="metric-delta" id="sim-roi">--%</span>
@@ -153,6 +233,19 @@ export function createSimulatorView() {
             </div>
         </div>
     </div>
+
+    <!-- Detail Information Modal -->
+    <div id="simulator-detail-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px; max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="detail-modal-title">Detalle</h3>
+                <button id="close-detail-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="detail-modal-body" style="overflow-y: auto;">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
     `;
 }
 
@@ -160,40 +253,177 @@ export function createSimulatorView() {
  * Setup listeners for simulator
  */
 export function setupSimulatorListeners() {
-    const btn = document.getElementById('calculate-simulator');
+    constbtn = document.getElementById('calculate-simulator');
     if (btn) {
         btn.addEventListener('click', () => {
             updateSimulator();
-            // Close modal
             const modal = document.getElementById('simulator-config-modal');
             if (modal) modal.classList.remove('open');
         });
     }
 
-    // Modal Interactions
+    // Config Modal Listeners
     const openBtn = document.getElementById('open-config-btn');
     const closeBtn = document.getElementById('close-modal-btn');
     const modal = document.getElementById('simulator-config-modal');
 
-    if (openBtn) {
-        openBtn.addEventListener('click', () => {
-            if (modal) modal.classList.add('open');
-        });
+    if (openBtn) openBtn.addEventListener('click', () => modal && modal.classList.add('open'));
+    if (closeBtn) closeBtn.addEventListener('click', () => modal && modal.classList.remove('open'));
+    if (modal) modal.addEventListener('click', (e) => e.target === modal && modal.classList.remove('open'));
+
+    // Detail Modal Listeners
+    const closeDetailBtn = document.getElementById('close-detail-modal-btn');
+    const detailModal = document.getElementById('simulator-detail-modal');
+
+    if (closeDetailBtn) closeDetailBtn.addEventListener('click', () => detailModal && detailModal.classList.remove('open'));
+    if (detailModal) detailModal.addEventListener('click', (e) => e.target === detailModal && detailModal.classList.remove('open'));
+
+    // Card Interaction Listeners
+    const mortgageCard = document.getElementById('sim-mortgage-card');
+    const netCard = document.getElementById('sim-net-card');
+
+    if (mortgageCard) {
+        mortgageCard.addEventListener('click', () => showDetailModal('mortgage'));
+    }
+    if (netCard) {
+        netCard.addEventListener('click', () => showDetailModal('net'));
+    }
+}
+
+/**
+ * Show Detail Modal with specific content
+ */
+function showDetailModal(type) {
+    if (!currentSimData) return;
+
+    const modal = document.getElementById('simulator-detail-modal');
+    const title = document.getElementById('detail-modal-title');
+    const body = document.getElementById('detail-modal-body');
+
+    if (!modal || !title || !body) return;
+
+    if (type === 'mortgage') {
+        title.textContent = "📜 Desglose Coste Hipoteca";
+
+        // Find paid installments
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Use globalSchedule or currentSimData.amortization_schedule
+        const paidItems = (currentSimData.amortization_schedule || [])
+            .filter(item => {
+                // Parse date
+                let d = item.date;
+                if (typeof d === "string") {
+                    if (d.includes("/")) {
+                        const parts = d.split("/");
+                        d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                    } else {
+                        d = new Date(d);
+                    }
+                }
+                return d <= today;
+            })
+            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Newest first
+
+        const totalInterest = currentSimData.total_interest_paid;
+
+        body.innerHTML = `
+            <div class="detail-explanation">
+                Este valor representa el dinero que has pagado en concepto de <b>Intereses</b> hasta la fecha. 
+                <br><br>
+                ⚠️ <b>Nota importante:</b> La parte del pago correspondiente a la <i>Amortización de Capital</i> NO se considera coste, ya que reduce tu deuda (es dinero que pasa de tu banco al valor de tu casa).
+            </div>
+
+            <div class="detail-section">
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th style="text-align:right">Cuota Total</th>
+                            <th style="text-align:right">Interés (Coste)</th>
+                            <th style="text-align:right">Amortización</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${paidItems.map(item => `
+                            <tr>
+                                <td>${item.date}</td>
+                                <td style="text-align:right; color:#94a3b8">${formatEUR(item.payment)}</td>
+                                <td style="text-align:right; font-weight:bold; color:#ef4444">${formatEUR(item.interest)}</td>
+                                <td style="text-align:right; color:#10b981">${formatEUR(item.principal)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr style="font-weight:bold; background:#f8fafc">
+                            <td>TOTAL</td>
+                            <td></td>
+                            <td style="text-align:right; color:#ef4444">${formatEUR(totalInterest)}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+    }
+    else if (type === 'net') {
+        title.textContent = "💰 Cálculo Ganancia Neta";
+
+        const gross = currentSimData.portfolio_value - currentSimData.portfolio_basis;
+        const taxes = Math.max(0, gross * 0.19); // Approx, actually backend sends it within net_benefit logic but we can estimate or use if passed
+        // Actually, backend sends: net_benefit = gross - taxes.
+        // And balance = net_benefit - interest.
+
+        // Let's reconstruct or use data if available.
+        // We can infer taxes: Gross - NetBenefit = Taxes.
+        const netBenefitPortfolio = currentSimData.net_benefit; // After taxes, before mortgage
+        const inferredTaxes = gross - currentSimData.net_benefit;
+        const interest = currentSimData.total_interest_paid;
+        const finalBalance = currentSimData.balance;
+
+        body.innerHTML = `
+            <div class="detail-explanation">
+                Explicación paso a paso de cómo se calcula la rentabilidad real de la operación ("Ganancia Neta").
+                Se restan los impuestos y el coste de oportunidad (intereses hipoteca pagados).
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-row">
+                    <span>Valor Actual Cartera</span>
+                    <span>${formatEUR(currentSimData.portfolio_value)}</span>
+                </div>
+                <div class="detail-row">
+                    <span>Coste Inicial (Inversión)</span>
+                    <span style="color:#94a3b8">-${formatEUR(currentSimData.portfolio_basis)}</span>
+                </div>
+                <div class="detail-row" style="border-top:1px dashed #e2e8f0; margin-top:5px; padding-top:5px">
+                    <span class="badge-math bg-plus">+</span>
+                    <span>Ganancia Bruta</span>
+                    <span style="font-weight:bold">${formatEUR(gross)}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="badge-math bg-minus">-</span>
+                    <span>Impuestos (aprox 19%)</span>
+                    <span style="color:#ef4444">${formatEUR(inferredTaxes)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="badge-math bg-minus">-</span>
+                    <span>Coste Hipoteca (Intereses pagados)</span>
+                    <span style="color:#ef4444">${formatEUR(interest)}</span>
+                </div>
+                
+                <div class="detail-row total">
+                    <span class="badge-math bg-equals">=</span>
+                    <span>GANANCIA NETA FINAL</span>
+                    <span style="color:${finalBalance >= 0 ? '#10b981' : '#ef4444'}">${formatEUR(finalBalance)}</span>
+                </div>
+            </div>
+        `;
     }
 
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            if (modal) modal.classList.remove('open');
-        });
-    }
-
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('open');
-            }
-        });
-    }
+    modal.classList.add('open');
 }
 
 /**
@@ -238,6 +468,8 @@ export async function updateSimulator() {
  * Render results in the UI
  */
 function renderSimulatorResults(data) {
+    currentSimData = data; // Store globally
+
     // 1. Update Metrics
     document.getElementById('sim-portfolio-basis').textContent = formatEUR(data.portfolio_basis);
     document.getElementById('sim-portfolio-value').textContent = formatEUR(data.portfolio_value);
@@ -258,7 +490,6 @@ function renderSimulatorResults(data) {
     } else {
         debugEl.innerHTML = `<span style="color:red">NULL</span> <br>Today: ${data.server_today}`;
         console.log("SIM DEBUG LOG:", data.debug_log);
-        console.log("BACKEND DEBUG:", data.backend_debug);
     }
 
     // UI color styling
