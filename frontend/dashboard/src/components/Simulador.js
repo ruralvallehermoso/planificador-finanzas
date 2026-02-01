@@ -15,7 +15,7 @@ export function createSimulatorView() {
     <div class="simulator-container">
         <div class="simulator-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <h2 class="simulator-title">Simulador: Inversión vs Deuda <span style="font-size: 0.6em; color: #94a3b8; font-weight: normal;">(v1.6)</span></h2>
+                <h2 class="simulator-title">Simulador: Inversión vs Deuda <span style="font-size: 0.6em; color: #94a3b8; font-weight: normal;">(v1.7)</span></h2>
                 <p class="simulator-subtitle">Compara si es más rentable mantener tu inversión o amortizar la hipoteca.</p>
             </div>
             <button id="open-config-btn" class="btn-secondary">
@@ -43,6 +43,7 @@ export function createSimulatorView() {
                         <span class="metric-label">Ganancia Neta Operación</span>
                         <span class="metric-value" id="sim-net-balance">--</span>
                         <span class="metric-delta" id="sim-roi">--%</span>
+                        <div style="font-size:0.6rem; color:#64748b; margin-top:4px;">Ult. Pago: <span id="sim-debug-date">--</span></div>
                     </div>
                 </div>
 
@@ -248,6 +249,7 @@ function renderSimulatorResults(data) {
 
     balanceEl.textContent = formatEUR(data.balance);
     roiEl.textContent = `${data.roi_pct > 0 ? '+' : ''}${data.roi_pct.toFixed(2)}%`;
+    if (data.last_paid_date) document.getElementById('sim-debug-date').textContent = data.last_paid_date;
 
     // UI color styling
     if (data.is_profitable) {

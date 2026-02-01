@@ -132,6 +132,7 @@ def compare_mortgage_vs_portfolio(
     
     # Calculate interest paid UP TO TODAY
     total_interest_paid = 0.0
+    last_paid_date = None
     if mortgage_schedule:
         today = date.today()
         # Find the last installment that has actually occurred
@@ -147,6 +148,7 @@ def compare_mortgage_vs_portfolio(
                         
                     if item_date <= today:
                         total_interest_paid = item["cumulative_interest"]
+                        last_paid_date = item_date
                     else:
                         break
                 except Exception:
@@ -170,7 +172,8 @@ def compare_mortgage_vs_portfolio(
         "total_interest_paid": round(total_interest_paid, 2),
         "balance": round(balance, 2),
         "is_profitable": is_profitable,
-        "roi_pct": round((balance / portfolio_basis * 100), 2) if portfolio_basis > 0 else 0.0
+        "roi_pct": round((balance / portfolio_basis * 100), 2) if portfolio_basis > 0 else 0.0,
+        "last_paid_date": last_paid_date
     }
 
 
