@@ -249,7 +249,16 @@ function renderSimulatorResults(data) {
 
     balanceEl.textContent = formatEUR(data.balance);
     roiEl.textContent = `${data.roi_pct > 0 ? '+' : ''}${data.roi_pct.toFixed(2)}%`;
-    if (data.last_paid_date) document.getElementById('sim-debug-date').textContent = data.last_paid_date;
+
+    // Enhanced Debug Display
+    const debugEl = document.getElementById('sim-debug-date');
+    if (data.last_paid_date) {
+        debugEl.textContent = data.last_paid_date;
+        debugEl.style.color = "#10b981"; // Green
+    } else {
+        debugEl.innerHTML = `<span style="color:red">NULL</span> <br>Today: ${data.server_today}`;
+        console.log("SIM DEBUG LOG:", data.debug_log);
+    }
 
     // UI color styling
     if (data.is_profitable) {

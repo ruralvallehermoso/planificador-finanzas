@@ -131,8 +131,11 @@ def compare_mortgage_vs_portfolio(
     net_benefit = gross_benefit - taxes
     
     # Calculate interest paid UP TO TODAY
+    today = date.today()
     total_interest_paid = 0.0
     last_paid_date = None
+    debug_search_log = []
+    
     if mortgage_schedule:
         today = date.today()
         # Find the last installment that has actually occurred
@@ -146,12 +149,15 @@ def compare_mortgage_vs_portfolio(
                     else:
                         item_date = item_date_str
                         
+                    debug_search_log.append(f"Check {item_date} <= {today} ? {item_date <= today}")
+
                     if item_date <= today:
                         total_interest_paid = item["cumulative_interest"]
                         last_paid_date = item_date
                     else:
                         break
-                except Exception:
+                except Exception as e:
+                    debug_search_log.append(f"Error parse {item_date_str}: {e}")
                     continue
             else:
                 # Fallback for synthetic schedules
@@ -172,8 +178,12 @@ def compare_mortgage_vs_portfolio(
         "total_interest_paid": round(total_interest_paid, 2),
         "balance": round(balance, 2),
         "is_profitable": is_profitable,
+        "balance": round(balance, 2),
+        "is_profitable": is_profitable,
         "roi_pct": round((balance / portfolio_basis * 100), 2) if portfolio_basis > 0 else 0.0,
-        "last_paid_date": last_paid_date
+        "last_paid_date": str(last_paid_date) if last_paid_date else None,
+        "server_today": str(today),
+        "debug_log": debug_search_log[:10] # Return first 10 checks
     }
 
 
