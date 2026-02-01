@@ -87,7 +87,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "Finanzas Backend (Reconstructed + Simulator)", "python": sys.version}
+    return {"message": "Finanzas Backend v2.0-DEBUG", "python": sys.version}
 
 @app.get("/api/sanity")
 def sanity():
