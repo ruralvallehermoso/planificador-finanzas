@@ -1,4 +1,11 @@
+/**
+ * Simulator component - Interactive mortgage vs investment analysis
+ */
+import { Chart } from 'chart.js';
+import { formatEUR, formatPercent } from '../utils/formatters.js';
+import { BACKEND_URL } from '../config.js';
 
+let simulatorChartInstance = null;
 let currentSimData = null;
 
 /**
