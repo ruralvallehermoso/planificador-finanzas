@@ -221,9 +221,7 @@ export async function updateSimulator() {
     }
 
     try {
-        const targetUrl = `${BACKEND_URL}/api/simulator/compare`;
-        console.log("FETCHING SIMULATOR FROM:", targetUrl);
-        const response = await fetch(targetUrl, {
+        const response = await fetch(`${BACKEND_URL}/api/simulator/compare`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
