@@ -473,7 +473,7 @@ function renderAmortizationTable(schedule) {
         const rowDate = new Date(s.date);
         rowDate.setHours(0, 0, 0, 0);
 
-        const isPaid = (rowDate < today);
+        const isPaid = (rowDate <= today);
         const isNext = (i === nextIndex);
 
         if (isPaid) {
