@@ -63,8 +63,6 @@ def fetch_yahoo_prices(symbols: Dict[str, str], usd_to_eur: float | None = None)
             data = res.json()
             price = float(data["chart"]["result"][0]["meta"]["regularMarketPrice"])
             currency = data["chart"]["result"][0]["meta"].get("currency", "EUR")
-            time.sleep(0.0) # No-op line to replace properly or just remove it.
-            # print(f"🔹 {asset_id} ({symbol}): {price} {currency}") # Removed for production
             
             # Normalizar moneda
             if currency == "USD":
