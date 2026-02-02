@@ -2022,3 +2022,128 @@ body {
         background-color: var(--bg-main); /* Touch feedback */
     }
 }
+/* ===== Mobile UI Bug Fixes (User Feedback) ===== */
+@media (max-width: 768px) {
+
+    /* 1. Header Fixes: Stack content to avoid overlap */
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+        /* Full width */
+        gap: 0.75rem;
+    }
+
+    .header-left {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .filter-buttons {
+        width: 100%;
+        justify-content: space-between;
+        /* Distribute buttons evenly */
+        overflow-x: auto;
+        /* Safety scroll if labels are long */
+        padding-bottom: 2px;
+    }
+
+    .filter-btn {
+        flex: 1;
+        /* Equal width */
+        text-align: center;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .header-right {
+        justify-content: space-between;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .total-display-wrapper {
+        flex: 1;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        /* Ensure sparkline doesn't push it too far? */
+    }
+
+    /* Hide sparkline on very small screens if needed, or keeping it but ensuring layout */
+    .portfolio-sparkline {
+        display: none !important;
+        /* Hide small sparkline in header to save space on mobile */
+    }
+
+    /* 2. Asset Table Fixes: Remove Horizontal Scroll */
+    .main-content {
+        padding: 0.5rem 0.25rem;
+        /* reduce padding further */
+        width: 100vw;
+        /* Explicitly constrain width */
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .table-card {
+        border-radius: 0;
+        border: none;
+        width: 100%;
+    }
+
+    .asset-row {
+        margin: 0;
+        width: 100%;
+    }
+
+    /* 3. History Card Fixes: Overflow */
+    .chart-card {
+        width: 100%;
+        overflow: hidden;
+        /* Contains children */
+    }
+
+    .chart-header {
+        flex-wrap: wrap;
+        /* Allow header items to wrap */
+        gap: 0.5rem;
+    }
+
+    /* If there are selector buttons, ensure they scroll */
+    .chart-controls,
+    .history-selector {
+        /* Assuming class names based on standard patterns */
+        overflow-x: auto;
+        white-space: nowrap;
+        max-width: 100%;
+        padding-bottom: 4px;
+    }
+
+    /* 4. Indexa Card Fixes: Chart Overflow */
+    .indexa-card {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .indexa-chart-container {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    canvas#indexa-sparkline {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 100%;
+    }
+
+    /* General overflow safety */
+    .card,
+    .table-card,
+    .chart-card,
+    .indexa-card {
+        max-width: 96vw;
+        /* Slight buffer */
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
