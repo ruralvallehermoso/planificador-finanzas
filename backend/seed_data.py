@@ -351,6 +351,7 @@ def get_initial_assets() -> list[schemas.AssetCreate]:
             quantity=80,
             price_eur=0,
             yahoo_symbol="EGLN.L",
+            currency="USD",
             image_url="https://img.icons8.com/color/96/gold-bars.png",
         ),
         dict(

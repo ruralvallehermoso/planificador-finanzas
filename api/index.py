@@ -40,6 +40,12 @@ async def lifespan(app: FastAPI):
                 if asset_data.id in current:
                     existing = current[asset_data.id]
                     
+                    # Generic Metadata Sync (ensure currency/config matches seed)
+                    if existing.currency != asset_data.currency:
+                         print(f"🔄 Updating Metadata (Currency) for {asset_data.id}: {existing.currency} -> {asset_data.currency}")
+                         existing.currency = asset_data.currency
+                         db.commit()
+
                     # FORCE UPDATE ING to 15000 unconditionally
                     if asset_data.id == "ing":
                          print(f"🔥 FORCE UPDATING ING: {existing.price_eur} -> {asset_data.price_eur}")
