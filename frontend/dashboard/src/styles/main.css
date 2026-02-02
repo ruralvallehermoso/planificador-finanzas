@@ -2146,4 +2146,201 @@ body {
         margin-left: auto;
         margin-right: auto;
     }
+}/* ===== Final Mobile Polish (Overriding previous mobile styles) ===== */
+@media (max-width: 768px) {
+
+    /* --- Main Container & Reset --- */
+    .main-content {
+        padding: 0;
+        /* Remove padding to maximize width */
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    .main-grid {
+        gap: 0.5rem;
+        /* Tighter gap */
+        padding: 0.5rem;
+    }
+
+    /* --- HEADER REDESIGN --- */
+    .header-container {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .header-content {
+        display: grid;
+        gap: 1rem;
+        /* Define 3 rows: 
+           1. Logo + Tools (Theme, Refresh, Currency)
+           2. Total Value (Hero)
+           3. Filters
+        */
+        grid-template-areas:
+            "top"
+            "hero"
+            "filters";
+    }
+
+    /* Row 1: Logo & Tools */
+    .header-left {
+        grid-area: top;
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    /* Move Buttons from Header Right to be inline with Logo visually */
+    .header-right {
+        /* We'll use absolute positioning or manipulate flex to merge them */
+        /* Actually, simpler: header-right contains buttons AND total. 
+           We need to separate them. */
+        display: contents;
+        /* Allow children to participate in grid */
+    }
+
+    /* The Buttons Container (Theme, Refresh, Currency) */
+    /* We target the buttons directly if possible, or the container minus total */
+    .header-right>.icon-btn {
+        grid-area: top;
+        /* Floating right in the top row */
+    }
+
+    /* Hacky but effective: 
+       We can't easily re-parent HTML with CSS. 
+       We will make header-left take full width, and position header-right buttons absolutely top-right?
+       Or use Flexbox ordering. 
+    */
+
+    .header-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .header-left {
+        /* Logo Row */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    /* We need to move the buttons (currently in header-right) up to the header-left row visually.
+       Since we can't reparent, we'll make header-left width standard and absolute position the buttons?
+       No, let's just create a "Top Bar" flex container.
+    */
+
+    /* NEW STRATEGY: 
+       Row 1: Logo (Left) ----- Buttons (Right)
+       Row 2: Hero Total (Center)
+       Row 3: Filter Buttons
+    */
+
+    /* Hide the "status-area" if it exists (I deleted it in JS, but nice to be safe) */
+    .status-area {
+        display: none !important;
+    }
+
+    /* Controls (Buttons) -> Move to top right absolute? */
+    .header-right {
+        position: absolute;
+        top: 1rem;
+        right: 0.5rem;
+        display: flex;
+        gap: 0.25rem;
+        /* Exclude total display from this flow */
+    }
+
+    .header-right .icon-btn {
+        /* Style adjustments for buttons */
+        padding: 0.4rem;
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .header-right svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    /* Total Display -> Move to dedicated Hero Row */
+    .total-display-wrapper {
+        margin-top: 2.5rem;
+        /* Space for logo/buttons */
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .total-display {
+        text-align: center;
+    }
+
+    .total-label {
+        font-size: 0.7rem;
+        opacity: 0.7;
+    }
+
+    .total-value {
+        font-size: 2rem;
+        /* Hero Size */
+        line-height: 1.1;
+    }
+
+    .portfolio-sparkline {
+        display: none !important;
+        /* Hide sparkline to clean up */
+    }
+
+    /* Filters */
+    .filter-buttons {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 0;
+        order: 3;
+        /* Ensure it's last */
+    }
+
+    /* --- ASSET TABLE REFINEMENTS --- */
+    .table-card {
+        background: transparent;
+        /* Seamless */
+        border: none;
+        box-shadow: none;
+    }
+
+    .asset-row {
+        margin: 0 0 0.5rem 0;
+        /* Vertical gap between cards */
+        width: 100%;
+        padding: 0.75rem 0.5rem;
+        /* Tighter padding */
+        border-radius: 0.75rem;
+        /* Rounded cards */
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        /* Subtle shadow per card */
+        border-bottom: none;
+        /* Card style, not list style */
+    }
+
+    .asset-info {
+        gap: 0.5rem;
+    }
+
+    .asset-icon,
+    .asset-icon-fallback {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .cell-price {
+        margin-left: 2.5rem;
+        /* Align with text */
+    }
+
+    .cell-total {
+        padding-right: 0;
+    }
 }
