@@ -189,7 +189,7 @@
                 </div>
                 <div>
                     <h1 class="text-slate-900 dark:text-white font-bold leading-tight tracking-tight text-lg">Master
-                        Portfolio</h1>
+                        Portfolio <span class="text-[9px] text-slate-400 font-normal">v2.1</span></h1>
                     <div class="flex items-center gap-2 text-[10px] font-bold tracking-wider mt-0.5 cursor-pointer hover:text-indigo-600 dark:hover:text-white group"
                         onclick="updateMarkets()" id="status-area">
                         <span class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500" id="status-dot"></span>
@@ -495,7 +495,9 @@
                     const d = await res.json();
                     if (d['usd-coin'] && d['usd-coin'].eur) {
                         usdToEur = d['usd-coin'].eur;
-                        document.getElementById('usd-rate').innerText = `USD: ${usdToEur.toFixed(4)}`;
+                        const el = document.getElementById('usd-rate');
+                        el.innerText = `USD (C): ${usdToEur.toFixed(4)}`; // (C) = Crypto/CoinGecko
+                        el.classList.add('text-emerald-500'); // Green for good sync
                         console.log("Flux Rate (USDC):", usdToEur);
                     } else {
                         throw new Error("No USDC data");
@@ -510,10 +512,11 @@
                             const data = await res.json();
                             const rate = data.chart.result[0].meta.regularMarketPrice;
                             if (rate) {
-                                // Yahoo EUR=X es USD/EUR o EUR/USD?
-                                // Yahoo EUR=X retorna 0.847 (EUR). Significa 1 USD = 0.847 EUR? Correcto.
                                 usdToEur = rate;
-                                document.getElementById('usd-rate').innerText = `USD: ${usdToEur.toFixed(4)}`;
+                                const el = document.getElementById('usd-rate');
+                                el.innerText = `USD (Y): ${usdToEur.toFixed(4)}`; // (Y) = Yahoo Fallback
+                                el.classList.remove('text-emerald-500');
+                                el.classList.add('text-orange-500'); // Orange for mismatch risk
                             }
                         }
                     } catch (e2) { console.error("Error USD/EUR (Yahoo):", e2); }
