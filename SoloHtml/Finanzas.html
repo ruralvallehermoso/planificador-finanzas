@@ -488,21 +488,39 @@
             const timeStamp = `&_=${new Date().getTime()}`;
 
             try {
-                // 1. Obtener Ratio USD/EUR
+                // 1. Obtener Ratio USD/EUR desde USDC (CoinGecko) para consistencia
+                // Yahoo daba ~0.847 mientras el mercado crypto operaba a ~0.89-0.91, causando discrepancias.
                 try {
-                    const url = proxyBase + encodeURIComponent("https://query1.finance.yahoo.com/v8/finance/chart/EUR=X?interval=1d&range=1d") + timeStamp;
-                    const res = await fetch(url);
-                    if (res.ok) {
-                        const data = await res.json();
-                        const rate = data.chart.result[0].meta.regularMarketPrice;
-                        if (rate) {
-                            usdToEur = rate;
-                            document.getElementById('usd-rate').innerText = `USD: ${usdToEur.toFixed(4)}`;
-                        }
+                    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=eur${timeStamp}`);
+                    const d = await res.json();
+                    if (d['usd-coin'] && d['usd-coin'].eur) {
+                        usdToEur = d['usd-coin'].eur;
+                        document.getElementById('usd-rate').innerText = `USD: ${usdToEur.toFixed(4)}`;
+                        console.log("Flux Rate (USDC):", usdToEur);
+                    } else {
+                        throw new Error("No USDC data");
                     }
-                } catch (e) { console.error("Error USD/EUR:", e); }
+                } catch (e) {
+                    console.error("Error USD/EUR (USDC), probando Yahoo:", e);
+                    // Fallback a Yahoo si CoinGecko falla
+                    try {
+                        const url = proxyBase + encodeURIComponent("https://query1.finance.yahoo.com/v8/finance/chart/EUR=X?interval=1d&range=1d") + timeStamp;
+                        const res = await fetch(url);
+                        if (res.ok) {
+                            const data = await res.json();
+                            const rate = data.chart.result[0].meta.regularMarketPrice;
+                            if (rate) {
+                                // Yahoo EUR=X es USD/EUR o EUR/USD?
+                                // Yahoo EUR=X retorna 0.847 (EUR). Significa 1 USD = 0.847 EUR? Correcto.
+                                usdToEur = rate;
+                                document.getElementById('usd-rate').innerText = `USD: ${usdToEur.toFixed(4)}`;
+                            }
+                        }
+                    } catch (e2) { console.error("Error USD/EUR (Yahoo):", e2); }
+                }
 
                 // 2. Obtener Acciones (Yahoo Finance)
+                // Usamos el usdToEur calculado arriba para conversiones consistentes
                 const stockPromises = db.filter(i => i.yahoo && !i.manual).map(async (item) => {
                     try {
                         const url = proxyBase + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${item.yahoo}?interval=1d&range=1d`) + timeStamp;
@@ -518,6 +536,7 @@
                 await Promise.all(stockPromises);
 
                 // 3. Obtener Criptos (CoinGecko)
+                // Pedimos EUR directamente. Al usar el rate USDC arriba, la conversión implícita es consistente.
                 const ids = db.filter(i => i.api_id && !i.manual).map(i => i.api_id).join(',');
                 if (ids) {
                     try {
