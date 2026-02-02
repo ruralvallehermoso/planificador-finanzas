@@ -46,7 +46,7 @@ def fetch_usd_eur_rate() -> float | None:
         return float(data["chart"]["result"][0]["meta"]["regularMarketPrice"])
     except Exception as e:
         print(f"⚠️ Error fetching USD/EUR rate: {e}")
-        return None
+        return 0.96  # Fallback conservative rate
 
 
 def fetch_yahoo_prices(symbols: Dict[str, str], usd_to_eur: float | None = None) -> Dict[str, float]:
@@ -63,8 +63,26 @@ def fetch_yahoo_prices(symbols: Dict[str, str], usd_to_eur: float | None = None)
             data = res.json()
             price = float(data["chart"]["result"][0]["meta"]["regularMarketPrice"])
             currency = data["chart"]["result"][0]["meta"].get("currency", "EUR")
-            if currency == "USD" and usd_to_eur:
-                price *= usd_to_eur
+            time.sleep(0.0) # No-op line to replace properly or just remove it.
+            # print(f"🔹 {asset_id} ({symbol}): {price} {currency}") # Removed for production
+            
+            # Normalizar moneda
+            if currency == "USD":
+                if usd_to_eur:
+                    price *= usd_to_eur
+                else:
+                    # Fallback si por alguna razón usd_to_eur es None/0 (aunque ya devolvemos 0.96 arriba)
+                    price *= 0.96 
+            elif currency == "GBp": # Peniques
+                price /= 100
+                # Asumir GBP similar a EUR o convertir si tuviéramos tasa. 
+                # Por ahora GBP~1.2EUR, así que 1 GBP = 1.2 EUR.
+                # Yahoo a veces da GBp para acciones de Londres.
+                # EGLN.L suele ser USD, pero si fuera GBp:
+                price *= 1.15 # Approx GBP->EUR 
+            elif currency == "GBP":
+                price *= 1.15
+
             prices[asset_id] = price
         except Exception as e:
             print(f"⚠️ Error fetching Yahoo price for {asset_id} ({symbol}): {e}")
