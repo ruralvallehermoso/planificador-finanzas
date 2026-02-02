@@ -348,160 +348,159 @@ async function updateMarkets() {
     setLoading(true);
 
     try {
+        // 1. Obtener Ratio USD/EUR desde USDC (CoinGecko) para consistencia
+        // Yahoo daba ~0.847 mientras el mercado crypto operaba a ~0.89-0.91, causando discrepancias.
         try {
-            // 1. Obtener Ratio USD/EUR desde USDC (CoinGecko) para consistencia
-            // Yahoo daba ~0.847 mientras el mercado crypto operaba a ~0.89-0.91, causando discrepancias.
-            try {
-                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=eur&_=${new Date().getTime()}`);
-                const d = await res.json();
-                if (d['usd-coin'] && d['usd-coin'].eur) {
-                    const rate = d['usd-coin'].eur;
-                    setUsdToEur(rate);
-                    updateUsdRate(rate, 'C'); // 'C' for Crypto/CoinGecko
-                    console.log("Flux Rate (USDC):", rate);
-                } else {
-                    throw new Error("No USDC data");
-                }
-            } catch (e) {
-                console.error("Error USD/EUR (USDC), probando Yahoo:", e);
-                // Fallback a Yahoo si CoinGecko falla
-                try {
-                    const rate = await fetchUsdEurRate();
-                    if (rate) {
-                        setUsdToEur(rate);
-                        updateUsdRate(rate, 'Y'); // 'Y' for Yahoo
-                    }
-                } catch (e2) {
-                    console.error("Error USD/EUR (Yahoo):", e2);
-                }
+            const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=eur&_=${new Date().getTime()}`);
+            const d = await res.json();
+            if (d['usd-coin'] && d['usd-coin'].eur) {
+                const rate = d['usd-coin'].eur;
+                setUsdToEur(rate);
+                updateUsdRate(rate, 'C'); // 'C' for Crypto/CoinGecko
+                console.log("Flux Rate (USDC):", rate);
+            } else {
+                throw new Error("No USDC data");
             }
-
-            // 2. Fetch stock prices
-            const stockAssets = getStockAssets();
-            const stockPrices = await fetchStockPrices(stockAssets, getUsdToEur());
-            Object.entries(stockPrices).forEach(([id, price]) => {
-                updateAsset(id, { price });
-            });
-
-            // 3. Fetch crypto prices
-            const cryptoAssets = getCryptoAssets();
-            const cryptoPrices = await fetchCryptoPrices(cryptoAssets);
-            Object.entries(cryptoPrices).forEach(([id, price]) => {
-                updateAsset(id, { price });
-            });
-
-            // 4. Fetch Indexa data
-            await updateIndexa();
-
-            // 5. Sync with backend so other apps (like Planificador) see the updated data
-            try {
-                fetch(`${BACKEND_URL}/api/markets/update`, { method: 'POST' }).catch(err => console.error('Error syncing with backend:', err));
-            } catch (e) {
-                console.error('Backend sync failed:', e);
-            }
-
         } catch (e) {
-            console.error('Error updating markets:', e);
-        } finally {
-            render();
-
-            // Refresh the portfolio evolution chart with current period
-            const activeBtn = document.querySelector('.portfolio-evolution .period-btn.active');
-            const period = activeBtn ? activeBtn.dataset.period : '24h';
-            renderPortfolioEvolution(period);
-
-            // Refresh history view if currently visible
-            const historyView = document.getElementById('history-view');
-            if (historyView && !historyView.classList.contains('hidden')) {
-                updateHistoryData();
-            }
-
-            // Refresh simulator view if currently visible
-            const simulatorView = document.getElementById('simulator-view');
-            if (simulatorView && !simulatorView.classList.contains('hidden')) {
-                updateSimulator();
-            }
-
-            // Save portfolio status to shared file for Planificador to read
+            console.error("Error USD/EUR (USDC), probando Yahoo:", e);
+            // Fallback a Yahoo si CoinGecko falla
             try {
-                const currentValue = getTotalValue('All');
-                const perf24h = await fetchPortfolioPerformance('24h', null, null);
-                const history = await fetchPortfolioHistory('7d', null, null);
-
-                let changePercent = 0;
-                if (perf24h && perf24h.previous_value > 0) {
-                    changePercent = ((currentValue - perf24h.previous_value) / perf24h.previous_value) * 100;
+                const rate = await fetchUsdEurRate();
+                if (rate) {
+                    setUsdToEur(rate);
+                    updateUsdRate(rate, 'Y'); // 'Y' for Yahoo
                 }
+            } catch (e2) {
+                console.error("Error USD/EUR (Yahoo):", e2);
+            }
+        }
 
-                const historyValues = history ? history.map(h => h.value) : [];
-                historyValues.push(currentValue); // Add current value as last point
+        // 2. Fetch stock prices
+        const stockAssets = getStockAssets();
+        const stockPrices = await fetchStockPrices(stockAssets, getUsdToEur());
+        Object.entries(stockPrices).forEach(([id, price]) => {
+            updateAsset(id, { price });
+        });
 
-                await fetch(`${BACKEND_URL}/api/portfolio/status`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        current_value: currentValue,
-                        change_percent: changePercent,
-                        history: historyValues,
-                        timestamp: new Date().toISOString()
-                    })
-                });
-            } catch (e) {
-                console.error('Error saving portfolio status:', e);
+        // 3. Fetch crypto prices
+        const cryptoAssets = getCryptoAssets();
+        const cryptoPrices = await fetchCryptoPrices(cryptoAssets);
+        Object.entries(cryptoPrices).forEach(([id, price]) => {
+            updateAsset(id, { price });
+        });
+
+        // 4. Fetch Indexa data
+        await updateIndexa();
+
+        // 5. Sync with backend so other apps (like Planificador) see the updated data
+        try {
+            fetch(`${BACKEND_URL}/api/markets/update`, { method: 'POST' }).catch(err => console.error('Error syncing with backend:', err));
+        } catch (e) {
+            console.error('Backend sync failed:', e);
+        }
+
+    } catch (e) {
+        console.error('Error updating markets:', e);
+    } finally {
+        render();
+
+        // Refresh the portfolio evolution chart with current period
+        const activeBtn = document.querySelector('.portfolio-evolution .period-btn.active');
+        const period = activeBtn ? activeBtn.dataset.period : '24h';
+        renderPortfolioEvolution(period);
+
+        // Refresh history view if currently visible
+        const historyView = document.getElementById('history-view');
+        if (historyView && !historyView.classList.contains('hidden')) {
+            updateHistoryData();
+        }
+
+        // Refresh simulator view if currently visible
+        const simulatorView = document.getElementById('simulator-view');
+        if (simulatorView && !simulatorView.classList.contains('hidden')) {
+            updateSimulator();
+        }
+
+        // Save portfolio status to shared file for Planificador to read
+        try {
+            const currentValue = getTotalValue('All');
+            const perf24h = await fetchPortfolioPerformance('24h', null, null);
+            const history = await fetchPortfolioHistory('7d', null, null);
+
+            let changePercent = 0;
+            if (perf24h && perf24h.previous_value > 0) {
+                changePercent = ((currentValue - perf24h.previous_value) / perf24h.previous_value) * 100;
             }
 
-            setLoading(false);
+            const historyValues = history ? history.map(h => h.value) : [];
+            historyValues.push(currentValue); // Add current value as last point
+
+            await fetch(`${BACKEND_URL}/api/portfolio/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_value: currentValue,
+                    change_percent: changePercent,
+                    history: historyValues,
+                    timestamp: new Date().toISOString()
+                })
+            });
+        } catch (e) {
+            console.error('Error saving portfolio status:', e);
         }
+
+        setLoading(false);
     }
+}
 
 /**
  * Update Indexa Capital data
  */
 async function updateIndexa() {
-        const result = await fetchIndexaAccounts();
+    const result = await fetchIndexaAccounts();
 
-        if (result.success && result.accounts.length > 0) {
-            setIndexaConnected(true);
+    if (result.success && result.accounts.length > 0) {
+        setIndexaConnected(true);
 
-            // Remove placeholder
-            removeAsset('idx_1');
+        // Remove placeholder
+        removeAsset('idx_1');
 
-            // Add each account as a separate asset
-            result.accounts.forEach(account => {
-                addAsset({
-                    id: `idx_${account.account_number}`,
-                    name: account.name,
-                    ticker: 'IDX',
-                    cat: 'Fondos',
-                    plat: 'Indexa',
-                    qty: 1,
-                    price: account.market_value,
-                    indexa_api: true,
-                    risk_profile: account.risk_profile,
-                    variation_pct: account.variation_pct,
-                    img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64'
-                });
+        // Add each account as a separate asset
+        result.accounts.forEach(account => {
+            addAsset({
+                id: `idx_${account.account_number}`,
+                name: account.name,
+                ticker: 'IDX',
+                cat: 'Fondos',
+                plat: 'Indexa',
+                qty: 1,
+                price: account.market_value,
+                indexa_api: true,
+                risk_profile: account.risk_profile,
+                variation_pct: account.variation_pct,
+                img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64'
             });
-            console.log(`✅ Indexa: ${result.accounts.length} accounts loaded (Total: ${result.totalValue.toFixed(2)}€)`);
+        });
+        console.log(`✅ Indexa: ${result.accounts.length} accounts loaded (Total: ${result.totalValue.toFixed(2)}€)`);
 
-            // Refresh history asset selector if we are in historical view
-            const historyView = document.getElementById('history-view');
-            if (historyView && !historyView.classList.contains('hidden')) {
-                const viewSelect = document.getElementById('history-view-select');
-                const category = viewSelect ? (viewSelect.value === 'global' ? null : viewSelect.value) : null;
-                populateAssetSelector(getAssets(), category);
-            }
-        } else {
-
-            setIndexaConnected(false);
-
-            // Update placeholder with error
-            updateAsset('idx_1', {
-                name: `Indexa (${result.error})`,
-                price: 0
-            });
+        // Refresh history asset selector if we are in historical view
+        const historyView = document.getElementById('history-view');
+        if (historyView && !historyView.classList.contains('hidden')) {
+            const viewSelect = document.getElementById('history-view-select');
+            const category = viewSelect ? (viewSelect.value === 'global' ? null : viewSelect.value) : null;
+            populateAssetSelector(getAssets(), category);
         }
-    }
+    } else {
 
-    // Start the application
-    document.addEventListener('DOMContentLoaded', init);
+        setIndexaConnected(false);
+
+        // Update placeholder with error
+        updateAsset('idx_1', {
+            name: `Indexa (${result.error})`,
+            price: 0
+        });
+    }
+}
+
+// Start the application
+document.addEventListener('DOMContentLoaded', init);
