@@ -1900,4 +1900,125 @@ body {
 
 .dark .btn-secondary:hover {
     background: rgba(30, 41, 59, 1);
+}/* ===== Mobile Responsive Redesign (Option B: Compact List) ===== */
+@media (max-width: 768px) {
+    /* Layout Adjustments */
+    .main-content {
+        padding: 0.5rem;
+    }
+
+    .main-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    /* Transform Table to Cards/List */
+    .asset-table {
+        display: block;
+    }
+
+    .asset-table thead {
+        display: none; /* Hide headers */
+    }
+
+    .asset-table tbody {
+        display: block;
+    }
+
+    .asset-table tr.asset-row {
+        display: grid;
+        grid-template-columns: 1fr auto; /* Left: Info, Right: Values */
+        grid-template-rows: auto auto;   /* Top: Name/Total, Bottom: Details/Change */
+        gap: 0.25rem 0.75rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-card);
+    }
+
+    /* Cell Resets */
+    .asset-table td {
+        display: block;
+        padding: 0;
+        text-align: left;
+        border: none;
+    }
+
+    /* 1. Asset Name & Icon (Top Left) */
+    .cell-asset {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .asset-info {
+        gap: 0.5rem;
+    }
+    
+    .asset-name {
+        font-size: 0.9375rem; /* Slightly larger for readability */
+    }
+
+    /* 2. Total Value (Top Right) - HERO */
+    .cell-total {
+        grid-column: 2;
+        grid-row: 1;
+        text-align: right;
+        align-self: center;
+    }
+
+    .cell-total .total-value {
+        font-size: 1rem; /* Prominent */
+    }
+
+    /* 3. Price & Quantity (Bottom Left) - Secondary Info */
+    .cell-price {
+        grid-column: 1;
+        grid-row: 2;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-left: 2.5rem; /* Indent to align with text, bypassing icon */
+        margin-top: -0.25rem;
+    }
+
+    .price-value {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    .qty-value {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+    
+    /* Add separator dot between price and qty via pseudo-element? No, flex gap is fine. */
+
+    /* 4. 24h Change (Bottom Right) */
+    .cell-change {
+        grid-column: 2;
+        grid-row: 2;
+        text-align: right;
+        align-self: flex-start;
+    }
+
+    .change-value {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* 5. Hide Less Critical Columns */
+    .cell-type, 
+    .cell-weight {
+        display: none;
+    }
+    
+    /* Tweaks for Card Appearance */
+    .table-card {
+        border-radius: 0; /* Full width feel on mobile */
+        border-left: none;
+        border-right: none;
+    }
+    
+    .asset-row:active {
+        background-color: var(--bg-main); /* Touch feedback */
+    }
 }
