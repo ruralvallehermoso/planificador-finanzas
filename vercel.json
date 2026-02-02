@@ -5,11 +5,8 @@
             "use": "@vercel/python"
         },
         {
-            "src": "frontend/dashboard/package.json",
-            "use": "@vercel/static-build",
-            "config": {
-                "distDir": "dist"
-            }
+            "src": "SoloHtml/*",
+            "use": "@vercel/static"
         }
     ],
     "routes": [
@@ -18,8 +15,12 @@
             "dest": "/api/index.py"
         },
         {
+            "src": "/",
+            "dest": "/SoloHtml/Finanzas.html"
+        },
+        {
             "src": "/(.*)",
-            "dest": "/frontend/dashboard/$1"
+            "dest": "/SoloHtml/$1"
         }
     ]
 }
