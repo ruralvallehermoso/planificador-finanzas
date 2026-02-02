@@ -27,10 +27,7 @@ export function createHeader() {
                 </div>
                 <div class="logo-text">
                     <h1>Master Portfolio <span style="font-size: 9px; font-weight: normal; color: #94a3b8;">v2.1</span></h1>
-                    <div class="status-area" id="status-area">
-                        <span class="status-dot" id="status-dot"></span>
-                        <span class="status-text" id="status-text">LISTO</span>
-                    </div>
+
                 </div>
             </div>
 
