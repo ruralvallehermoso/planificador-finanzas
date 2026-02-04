@@ -99,3 +99,29 @@ class PlatformAsset(Base):
     
     def __repr__(self):
         return f"<PlatformAsset {self.name} ({self.platform_id})>"
+
+class KeyStore(Base):
+    """
+    Stores encrypted cryptographic keys for the vault.
+    Supports hybrid encryption architecture.
+    """
+    __tablename__ = "keystore"
+    
+    id = Column(String, primary_key=True, default="primary")
+    
+    # RSA Public Key (Base64 encoded PEM) - Safe to expose
+    public_key = Column(Text, nullable=False)
+    
+    # RSA Private Key Encrypted with Master Password (AES-GCM)
+    # Format: salt.nonce.tag.ciphertext
+    private_key_encrypted = Column(Text, nullable=False)
+    
+    # Data Encryption Key (DEK) Encrypted with RSA Public Key
+    # Format: Base64 encoded OAEP ciphertext
+    dek_encrypted = Column(Text, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<KeyStore {self.id}>"

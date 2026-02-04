@@ -139,6 +139,7 @@ class HealthResponse(BaseModel):
     status: str
     vault_path: str
     is_unlocked: bool
+    is_setup: bool
     platform_count: int
 
 
