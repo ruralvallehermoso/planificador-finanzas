@@ -256,7 +256,9 @@
                         de Activos</h2>
                     <div class="text-xs text-slate-500 font-mono text-right">
                         <span id="asset-count">0</span> items<br>
-                        <span id="usd-rate" class="text-[10px] text-slate-400 dark:text-slate-600">USD: ...</span>
+                        <span id="usd-rate"
+                            class="text-[10px] text-slate-400 dark:text-slate-600 cursor-pointer hover:text-indigo-500 transition-colors"
+                            onclick="toggleCurrency()" title="Cambiar divisa EUR/USD">USD: ...</span>
                     </div>
                 </div>
 
@@ -401,8 +403,16 @@
         let editTarget = null;
         let usdToEur = 0.95;
 
+        let displayCurrency = 'EUR'; // 'EUR' or 'USD'
+
         const formatEUR = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
-        const formatPrice = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(n);
+        const formatUSD = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+        const formatPrice = (n, currency = 'EUR') => new Intl.NumberFormat(currency === 'EUR' ? 'es-ES' : 'en-US', { style: 'currency', currency: currency, minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(n);
+
+        function toggleCurrency() {
+            displayCurrency = displayCurrency === 'EUR' ? 'USD' : 'EUR';
+            render();
+        }
 
         function render() {
             const tbody = document.getElementById('asset-table');
@@ -414,14 +424,32 @@
             const currentTotal = data.reduce((acc, i) => acc + (i.price * i.qty), 0);
 
             // Actualizar Header
-            document.getElementById('total-label').innerText = activeFilter === 'All' ? 'PATRIMONIO GLOBAL' : `VALOR ${activeFilter.toUpperCase()}`;
-            document.getElementById('global-total').innerText = formatEUR(currentTotal);
+            const rate = displayCurrency === 'EUR' ? 1 : (1 / (usdToEur || 1));
+            const totalDisplay = currentTotal * rate;
+            const formatFn = displayCurrency === 'EUR' ? formatEUR : formatUSD;
+
+            document.getElementById('total-label').innerText = activeFilter === 'All' ? `PATRIMONIO GLOBAL (${displayCurrency})` : `VALOR ${activeFilter.toUpperCase()} (${displayCurrency})`;
+            document.getElementById('global-total').innerText = formatFn(totalDisplay);
             document.getElementById('asset-count').innerText = data.length;
+
+            // Actualizar indicador de divisa
+            const rateEl = document.getElementById('usd-rate');
+            if (displayCurrency === 'USD') {
+                rateEl.classList.add('font-bold', 'text-indigo-600');
+                rateEl.innerText = `MOSTRANDO EN USD`;
+            } else {
+                rateEl.classList.remove('font-bold', 'text-indigo-600');
+                // Restaurar texto original (se actualizará en updateMarkets o mantener el último conocido)
+                rateEl.innerText = `USD (C): ${usdToEur.toFixed(4)}`;
+            }
 
             data.sort((a, b) => (b.price * b.qty) - (a.price * a.qty));
 
             data.forEach(item => {
                 const totalVal = item.price * item.qty;
+                const convertedPrice = item.price * rate;
+                const convertedTotal = totalVal * rate;
+
                 // Porcentaje Relativo a la Vista Actual
                 const percent = currentTotal > 0 ? ((totalVal / currentTotal) * 100).toFixed(1) : 0;
 
@@ -468,11 +496,11 @@
                         </div>
                     </td>
                     <td class="px-5 py-3.5 text-right ${animClass}">
-                        <div class="mono text-sm ${priceClass}">${formatPrice(item.price)}</div>
+                        <div class="mono text-sm ${priceClass}">${formatPrice(convertedPrice, displayCurrency)}</div>
                         <div class="text-[10px] text-slate-500 dark:text-slate-600 font-mono">${item.qty < 10 ? item.qty.toFixed(4) : item.qty.toFixed(0)} un.</div>
                     </td>
                     <td class="px-5 py-3.5 text-right">
-                        <div class="text-emerald-600 dark:text-emerald-400 font-bold text-sm mono tracking-tight">${formatEUR(totalVal)}</div>
+                        <div class="text-emerald-600 dark:text-emerald-400 font-bold text-sm mono tracking-tight">${formatFn(convertedTotal)}</div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -496,7 +524,10 @@
                     if (d['usd-coin'] && d['usd-coin'].eur) {
                         usdToEur = d['usd-coin'].eur;
                         const el = document.getElementById('usd-rate');
-                        el.innerText = `USD (C): ${usdToEur.toFixed(4)}`; // (C) = Crypto/CoinGecko
+                        const el = document.getElementById('usd-rate');
+                        if (displayCurrency === 'EUR') {
+                            el.innerText = `USD (C): ${usdToEur.toFixed(4)}`; // (C) = Crypto/CoinGecko
+                        }
                         el.classList.add('text-emerald-500'); // Green for good sync
                         console.log("Flux Rate (USDC):", usdToEur);
                     } else {
@@ -514,7 +545,10 @@
                             if (rate) {
                                 usdToEur = rate;
                                 const el = document.getElementById('usd-rate');
-                                el.innerText = `USD (Y): ${usdToEur.toFixed(4)}`; // (Y) = Yahoo Fallback
+                                const el = document.getElementById('usd-rate');
+                                if (displayCurrency === 'EUR') {
+                                    el.innerText = `USD (Y): ${usdToEur.toFixed(4)}`; // (Y) = Yahoo Fallback
+                                }
                                 el.classList.remove('text-emerald-500');
                                 el.classList.add('text-orange-500'); // Orange for mismatch risk
                             }
@@ -726,7 +760,7 @@
                     <div class="flex justify-between items-center text-xs p-2 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <span class="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[100px]">${i.name}</span>
                         <div class="text-right">
-                            <span class="text-slate-900 dark:text-white font-mono font-bold block">${formatEUR(val)}</span>
+                            <span class="text-slate-900 dark:text-white font-mono font-bold block">${(displayCurrency === 'EUR' ? formatEUR : formatUSD)(val * (displayCurrency === 'EUR' ? 1 : 1 / (usdToEur || 1)))}</span>
                             <span class="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold">${pct}%</span>
                         </div>
                     </div>`;
