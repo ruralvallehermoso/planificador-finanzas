@@ -294,7 +294,13 @@ def get_period_dates(period: str) -> tuple[date, date]:
 def get_assets_with_performance(db: Session, category: Optional[str] = None) -> List[models.Asset]:
     """
     Returns assets with 'change_24h_pct' populated.
+    
+    Uses Yahoo Finance API's previousClose for stocks/funds and Indexa API
+    for Indexa accounts, instead of relying on DB historical prices which
+    may be ephemeral on serverless deployments.
     """
+    import requests
+    
     # 1. Fetch Assets
     if category and category.lower() != "all":
         ids_query = select(models.Asset).where(models.Asset.category == category)
@@ -305,8 +311,32 @@ def get_assets_with_performance(db: Session, category: Optional[str] = None) -> 
     if not assets:
         return []
 
-    # 2. Fetch Previous Prices (Yesterday or Last Known)
-    # Strategy: Fetch last 7 days of history for these assets to find the most recent 'previous' price
+    YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+    YAHOO_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json"
+    }
+
+    # 2. Fetch live change data from Yahoo for assets with yahoo_symbol
+    yahoo_changes = {}
+    for asset in assets:
+        if asset.yahoo_symbol and not asset.manual:
+            try:
+                url = YAHOO_CHART_URL.format(symbol=asset.yahoo_symbol)
+                res = requests.get(url, headers=YAHOO_HEADERS, timeout=10)
+                if res.ok:
+                    data = res.json()
+                    meta = data.get("chart", {}).get("result", [{}])[0].get("meta", {})
+                    current = meta.get("regularMarketPrice", 0)
+                    previous = meta.get("chartPreviousClose", 0) or meta.get("previousClose", 0)
+                    
+                    if previous and previous > 0 and current and current > 0:
+                        change = ((current - previous) / previous) * 100
+                        yahoo_changes[asset.id] = round(change, 2)
+            except Exception as e:
+                print(f"⚠️ Yahoo change fetch error for {asset.id}: {e}")
+
+    # 3. Fallback: use DB historical prices for any remaining assets
     today = date.today()
     since_date = today - timedelta(days=7)
     asset_ids = [a.id for a in assets]
@@ -320,25 +350,23 @@ def get_assets_with_performance(db: Session, category: Optional[str] = None) -> 
     )
     history = db.execute(stmt).scalars().all()
 
-    # Map: asset_id -> recent_price
-    # Since we ordered by date desc, the first one we find for an asset is the most recent
     prev_prices = {}
     for h in history:
         if h.asset_id not in prev_prices:
             prev_prices[h.asset_id] = h.price_eur
 
-    # 3. Calculate Change
+    # 4. Apply changes to assets — Yahoo live data takes priority, then DB fallback
     for asset in assets:
-        prev = prev_prices.get(asset.id)
-        current = asset.price_eur
-        
-        # Default 0.0
         change = 0.0
         
-        if prev and prev > 0:
-            change = ((current - prev) / prev) * 100.0
+        if asset.id in yahoo_changes:
+            change = yahoo_changes[asset.id]
+        elif asset.id in prev_prices:
+            prev = prev_prices[asset.id]
+            current = asset.price_eur
+            if prev and prev > 0:
+                change = ((current - prev) / prev) * 100.0
         
-        # Attach to object (Pydantic will read this)
         asset.change_24h_pct = round(change, 2)
 
     return assets
