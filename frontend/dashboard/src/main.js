@@ -457,7 +457,21 @@ async function updateMarkets() {
  * Update Indexa Capital data
  */
 async function updateIndexa() {
-    const result = await fetchIndexaAccounts();
+    // Fetch Indexa accounts and 24h changes concurrently to avoid blocking
+    const [result, changesRes] = await Promise.all([
+        fetchIndexaAccounts(),
+        fetch(`${BACKEND_URL}/api/assets/changes?min_value=0`).catch(() => ({ ok: false }))
+    ]);
+
+    let changesMap = {};
+    if (changesRes && changesRes.ok) {
+        try {
+            const changes = await changesRes.json();
+            changes.forEach(c => { changesMap[c.id] = c.change_24h_pct; });
+        } catch (e) {
+            console.error('Error parsing indexa changes:', e);
+        }
+    }
 
     if (result.success && result.accounts.length > 0) {
         setIndexaConnected(true);
@@ -467,8 +481,9 @@ async function updateIndexa() {
 
         // Add each account as a separate asset
         result.accounts.forEach(account => {
+            const assetId = `idx_${account.account_number}`;
             addAsset({
-                id: `idx_${account.account_number}`,
+                id: assetId,
                 name: account.name,
                 ticker: 'IDX',
                 cat: 'Fondos',
@@ -476,6 +491,7 @@ async function updateIndexa() {
                 qty: 1,
                 price: account.market_value,
                 indexa_api: true,
+                change24h: changesMap[assetId] || 0.0,
                 risk_profile: account.risk_profile,
                 variation_pct: account.variation_pct,
                 img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64'
