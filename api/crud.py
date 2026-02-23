@@ -338,7 +338,7 @@ def get_assets_with_performance(db: Session, category: Optional[str] = None) -> 
 
     # 3. Fallback: use DB historical prices for any remaining assets
     today = date.today()
-    since_date = today - timedelta(days=7)
+    since_date = today - timedelta(days=14) # Búsqueda hasta 10 días para sortear fines de semana
     asset_ids = [a.id for a in assets]
 
     stmt = (
@@ -350,10 +350,12 @@ def get_assets_with_performance(db: Session, category: Optional[str] = None) -> 
     )
     history = db.execute(stmt).scalars().all()
 
-    prev_prices = {}
+    # Agrupar historial por asset_id
+    history_by_asset = {}
     for h in history:
-        if h.asset_id not in prev_prices:
-            prev_prices[h.asset_id] = h.price_eur
+        if h.asset_id not in history_by_asset:
+            history_by_asset[h.asset_id] = []
+        history_by_asset[h.asset_id].append(h)
 
     # 4. Apply changes to assets — Yahoo live data takes priority, then DB fallback
     for asset in assets:
@@ -361,11 +363,21 @@ def get_assets_with_performance(db: Session, category: Optional[str] = None) -> 
         
         if asset.id in yahoo_changes:
             change = yahoo_changes[asset.id]
-        elif asset.id in prev_prices:
-            prev = prev_prices[asset.id]
+        elif asset.id in history_by_asset:
+            asset_history = history_by_asset[asset.id]
             current = asset.price_eur
-            if prev and prev > 0:
-                change = ((current - prev) / prev) * 100.0
+            previous = None
+            
+            # Buscar el primer precio histórico que difiera del precio actual (último cierre distinto)
+            for h in asset_history:
+                # Si hay diferencia de más del 0.01%
+                if abs(h.price_eur - current) / current > 0.0001:
+                    previous = h.price_eur
+                    break
+                    
+            # Si todos los precios recientes son iguales, devolvemos el cambio a 0.0%
+            if previous and previous > 0:
+                change = ((current - previous) / previous) * 100.0
         
         asset.change_24h_pct = round(change, 2)
 
