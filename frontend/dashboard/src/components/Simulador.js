@@ -5,8 +5,7 @@ import { Chart } from 'chart.js';
 import { formatEUR, formatPercent } from '../utils/formatters.js';
 import { BACKEND_URL } from '../config.js';
 
-let simulatorLineChartInstance = null;
-let simulatorBarChartInstance = null;
+let simulatorChartInstance = null;
 let currentSimData = null;
 
 /**
@@ -136,10 +135,9 @@ export function createSimulatorView() {
                 </div>
 
                 <div class="simulator-card chart-card">
-                    <h3 class="card-title">Evolución Comparativa (Panel Dual)</h3>
-                    <div class="simulator-chart-container" style="display: flex; flex-direction: column; gap: 10px;">
-                        <canvas id="simulatorChart_lines" style="max-height: 250px;"></canvas>
-                        <canvas id="simulatorChart_bars" style="max-height: 120px;"></canvas>
+                    <h3 class="card-title">Evolución Comparativa</h3>
+                    <div class="simulator-chart-container">
+                        <canvas id="simulatorChart"></canvas>
                     </div>
                 </div>
                 
@@ -542,15 +540,15 @@ function renderAssetBreakdown(breakdown) {
 }
 
 /**
- * Render comparison chart (Dual Panel)
+ * Render comparison chart
  */
 function renderSimulatorChart(history) {
-    const canvasLines = document.getElementById('simulatorChart_lines');
-    const canvasBars = document.getElementById('simulatorChart_bars');
-    if (!canvasLines || !canvasBars) return;
+    const canvas = document.getElementById('simulatorChart');
+    if (!canvas) return;
 
-    if (simulatorLineChartInstance) simulatorLineChartInstance.destroy();
-    if (simulatorBarChartInstance) simulatorBarChartInstance.destroy();
+    if (simulatorChartInstance) {
+        simulatorChartInstance.destroy();
+    }
 
     const isDark = document.documentElement.classList.contains('dark');
 
@@ -562,34 +560,31 @@ function renderSimulatorChart(history) {
 
     const benefitData = history.map(h => h.net_benefit);
     const interestData = history.map(h => h.interest_paid);
-    const balanceData = history.map(h => h.balance);
 
-    const ctxLines = canvasLines.getContext('2d');
-    const ctxBars = canvasBars.getContext('2d');
+    const ctx = canvas.getContext('2d');
 
-    // --- Top Panel (Lines) ---
-    simulatorLineChartInstance = new Chart(ctxLines, {
+    simulatorChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels,
             datasets: [
                 {
-                    label: 'Beneficio',
+                    label: 'Beneficio Neto Cartera',
                     data: benefitData,
                     borderColor: '#10b981',
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     borderWidth: 2,
-                    pointRadius: 2,
-                    tension: 0.3
+                    fill: false,
+                    tension: 0.1
                 },
                 {
-                    label: 'Costo',
+                    label: 'Coste Acumulado Hipoteca',
                     data: interestData,
                     borderColor: '#ef4444',
-                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
                     borderWidth: 2,
-                    pointRadius: 2,
-                    tension: 0.3
+                    fill: false,
+                    tension: 0.1
                 }
             ]
         },
@@ -599,12 +594,7 @@ function renderSimulatorChart(history) {
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: { color: isDark ? '#e2e8f0' : '#1e293b', usePointStyle: true, boxWidth: 8 }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) { return context.dataset.label + ': ' + formatEUR(context.raw); }
-                    }
+                    labels: { color: isDark ? '#e2e8f0' : '#1e293b' }
                 }
             },
             scales: {
@@ -613,47 +603,6 @@ function renderSimulatorChart(history) {
                     grid: { color: isDark ? '#334155' : '#e2e8f0' },
                     ticks: {
                         color: isDark ? '#94a3b8' : '#64748b',
-                        callback: (v) => formatEUR(v)
-                    }
-                },
-                x: {
-                    display: false // Hide x-axis labels on top chart
-                }
-            }
-        }
-    });
-
-    // --- Bottom Panel (Histogram MACD style) ---
-    simulatorBarChartInstance = new Chart(ctxBars, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Saldo Neto',
-                    data: balanceData,
-                    backgroundColor: balanceData.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) { return 'Saldo Neto: ' + formatEUR(context.raw); }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    grid: { display: false },
-                    ticks: {
-                        color: isDark ? '#94a3b8' : '#64748b',
-                        maxTicksLimit: 3,
                         callback: (v) => formatEUR(v)
                     }
                 },
