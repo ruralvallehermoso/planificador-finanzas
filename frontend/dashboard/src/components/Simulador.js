@@ -2,8 +2,12 @@
  * Simulator component - Interactive mortgage vs investment analysis
  */
 import { Chart } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
+import 'hammerjs';
 import { formatEUR, formatPercent } from '../utils/formatters.js';
 import { BACKEND_URL } from '../config.js';
+
+Chart.register(zoomPlugin);
 
 let simulatorChartInstance = null;
 let currentSimData = null;
@@ -96,6 +100,23 @@ export function createSimulatorView() {
       .bg-plus { background: #dcfce7; color: #166534; }
       .bg-minus { background: #fee2e2; color: #991b1b; }
       .bg-equals { background: #e0e7ff; color: #3730a3; }
+      
+      .simulator-card:fullscreen {
+          background: var(--bg-card);
+          padding: 20px;
+          border-radius: 0;
+          height: 100vh;
+          width: 100vw;
+          overflow-y: auto;
+      }
+      .chart-controls {
+          display: flex;
+          gap: 10px;
+      }
+      .btn-small {
+          padding: 4px 10px;
+          font-size: 0.8em;
+      }
     </style>
 
     <div class="simulator-container">
@@ -134,9 +155,15 @@ export function createSimulatorView() {
                     </div>
                 </div>
 
-                <div class="simulator-card chart-card">
-                    <h3 class="card-title">Evolución Comparativa</h3>
-                    <div class="simulator-chart-container">
+                <div class="simulator-card chart-card" id="sim-chart-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 class="card-title" style="margin: 0;">Evolución Comparativa</h3>
+                        <div class="chart-controls">
+                            <button id="reset-zoom-btn" class="btn-secondary btn-small" style="display: none;">🔄 Reset Zoom</button>
+                            <button id="fullscreen-chart-btn" class="btn-secondary btn-small">⛶ Pantalla Completa</button>
+                        </div>
+                    </div>
+                    <div class="simulator-chart-container" style="flex-grow: 1; min-height: 300px;">
                         <canvas id="simulatorChart"></canvas>
                     </div>
                 </div>
@@ -294,6 +321,43 @@ export function setupSimulatorListeners() {
     }
     if (netCard) {
         netCard.addEventListener('click', () => showDetailModal('net'));
+    }
+
+    // Chart Controls Listeners
+    const resetZoomBtn = document.getElementById('reset-zoom-btn');
+    const fullscreenBtn = document.getElementById('fullscreen-chart-btn');
+    const chartCard = document.getElementById('sim-chart-card');
+
+    if (resetZoomBtn) {
+        resetZoomBtn.addEventListener('click', () => {
+            if (simulatorChartInstance) {
+                simulatorChartInstance.resetZoom();
+                resetZoomBtn.style.display = 'none';
+            }
+        });
+    }
+
+    if (fullscreenBtn && chartCard) {
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                chartCard.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement === chartCard) {
+                fullscreenBtn.textContent = '❌ Salir Pantalla Completa';
+                chartCard.style.display = 'flex';
+                chartCard.style.flexDirection = 'column';
+            } else {
+                fullscreenBtn.textContent = '⛶ Pantalla Completa';
+                chartCard.style.display = 'block';
+            }
+        });
     }
 }
 
@@ -604,12 +668,6 @@ function renderSimulatorChart(history) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: { color: isDark ? '#e2e8f0' : '#1e293b' }
-                }
-            },
             scales: {
                 y: {
                     beginAtZero: true,
@@ -622,6 +680,35 @@ function renderSimulatorChart(history) {
                 x: {
                     grid: { display: false },
                     ticks: { color: isDark ? '#94a3b8' : '#64748b' }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { color: isDark ? '#e2e8f0' : '#1e293b' }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'xy',
+                        onPanStart({chart}) {
+                            const btn = document.getElementById('reset-zoom-btn');
+                            if (btn) btn.style.display = 'inline-block';
+                        }
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'xy',
+                        onZoom({chart}) {
+                            const btn = document.getElementById('reset-zoom-btn');
+                            if (btn) btn.style.display = 'inline-block';
+                        }
+                    }
                 }
             }
         }
