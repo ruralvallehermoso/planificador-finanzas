@@ -560,6 +560,7 @@ function renderSimulatorChart(history) {
 
     const benefitData = history.map(h => h.net_benefit);
     const interestData = history.map(h => h.interest_paid);
+    const balanceData = history.map(h => h.balance);
 
     const ctx = canvas.getContext('2d');
 
@@ -585,6 +586,18 @@ function renderSimulatorChart(history) {
                     borderWidth: 2,
                     fill: false,
                     tension: 0.1
+                },
+                {
+                    label: '⭐ Ganancia Neta Operación',
+                    data: balanceData,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#f59e0b'
                 }
             ]
         },
