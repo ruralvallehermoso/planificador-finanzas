@@ -69,7 +69,7 @@ export function createHistoryChartContainer() {
  * @param {Array<{date: string, value: number}>} data - Historical data points
  * @param {boolean} isPositive - Whether the change is positive (for color)
  */
-export function renderHistoryChart(data, isPositive = true) {
+export function renderHistoryChart(data, isPositive = true, period = '1m') {
     const canvas = document.getElementById('historyChart');
     if (!canvas) return;
 
@@ -143,6 +143,15 @@ export function renderHistoryChart(data, isPositive = true) {
                     callbacks: {
                         title: (ctx) => {
                             const date = new Date(ctx[0].parsed.x);
+                            if (period === '24h' || period === '7d') {
+                                return date.toLocaleString('es-ES', {
+                                    weekday: 'short',
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                            }
                             return date.toLocaleDateString('es-ES', {
                                 day: 'numeric',
                                 month: 'short',
@@ -157,8 +166,9 @@ export function renderHistoryChart(data, isPositive = true) {
                 x: {
                     type: 'time',
                     time: {
-                        unit: 'day',
+                        unit: period === '24h' ? 'hour' : (period === '7d' ? 'day' : 'day'),
                         displayFormats: {
+                            hour: 'HH:mm',
                             day: 'dd MMM'
                         }
                     },

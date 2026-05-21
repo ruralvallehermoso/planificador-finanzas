@@ -185,12 +185,24 @@ export async function renderPortfolioEvolution(period = '1m') {
                         titleFont: { size: 12, weight: '500' },
                         bodyFont: { size: 16, weight: '600' },
                         callbacks: {
-                            title: (items) => new Date(items[0].parsed.x).toLocaleDateString('es-ES', {
-                                weekday: 'short',
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                            }),
+                            title: (items) => {
+                                const date = new Date(items[0].parsed.x);
+                                if (period === '24h' || period === '7d') {
+                                    return date.toLocaleString('es-ES', {
+                                        weekday: 'short',
+                                        day: 'numeric',
+                                        month: 'short',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    });
+                                }
+                                return date.toLocaleDateString('es-ES', {
+                                    weekday: 'short',
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                });
+                            },
                             label: (item) => formatCurrency(convertValue(item.parsed.y), getDisplayCurrency())
                         }
                     }
@@ -199,9 +211,9 @@ export async function renderPortfolioEvolution(period = '1m') {
                     x: {
                         type: 'time',
                         time: {
-                            // Backend provides daily data, so always use 'day' as base unit
-                            unit: period === '24h' || period === '7d' ? 'day' : 'week',
+                            unit: period === '24h' ? 'hour' : (period === '7d' ? 'day' : 'week'),
                             displayFormats: {
+                                hour: 'HH:mm',
                                 day: 'dd MMM',
                                 week: 'dd MMM'
                             }

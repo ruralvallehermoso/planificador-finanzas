@@ -295,12 +295,14 @@ async function updateHistoryData() {
         let adjustedHistory = history || [];
         if (adjustedHistory.length > 0 && currentValue > 0) {
             // Add current value as the final data point (now)
-            const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+            const now = (currentPeriod === '24h' || currentPeriod === '7d')
+                ? new Date().toISOString()
+                : new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
             adjustedHistory = [...adjustedHistory, { date: now, value: currentValue }];
         }
 
         // Render chart with adjusted history
-        renderHistoryChart(adjustedHistory, isPositive);
+        renderHistoryChart(adjustedHistory, isPositive, currentPeriod);
 
         // Update performance display
         updatePerformanceDisplay(adjustedPerformance, adjustedPerf24h);

@@ -259,6 +259,10 @@ def get_portfolio_history(
     asset_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    if period in ("24h", "7d"):
+        history = crud.reconstruct_intraday_portfolio_history(db, period, category, asset_id)
+        return [schemas.PortfolioHistoryPoint(date=h["date"], value=h["value"]) for h in history]
+
     start_date, end_date = crud.get_period_dates(period)
     # 1. Try snapshots
     snapshots = crud.get_portfolio_snapshots(db, start_date, end_date, category, asset_id)

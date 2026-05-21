@@ -96,7 +96,10 @@ def get_history_for_asset(db: Session, asset_id: str, limit_days: int = 365 * 5)
 
 # ============= Portfolio History Functions =============
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
+import requests
+from concurrent.futures import ThreadPoolExecutor
+from market_client import fetch_usd_eur_rate
 
 
 def get_portfolio_snapshots(
@@ -243,6 +246,154 @@ def reconstruct_portfolio_history(
         
         current += timedelta(days=1)
     
+    return result
+
+
+def fetch_yahoo_hourly_prices(symbol: str, range_str: str, usd_to_eur: float) -> List[tuple[datetime, float]]:
+    """Obtiene precios históricos por hora para un activo desde Yahoo Finance."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1h&range={range_str}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json"
+    }
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.ok:
+            data = res.json()
+            result = data.get("chart", {}).get("result", [{}])[0]
+            timestamps = result.get("timestamp", [])
+            closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+            meta = result.get("meta", {})
+            currency = meta.get("currency", "EUR")
+            
+            # Determinar factor de conversión
+            conv = 1.0
+            if currency == "USD":
+                conv = usd_to_eur
+            elif currency in ("GBp", "GBX"):
+                conv = 0.0115  # Pence to EUR approx
+            elif currency == "GBP":
+                conv = 1.15
+                
+            points = []
+            for ts, close in zip(timestamps, closes):
+                if ts is not None and close is not None:
+                    dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+                    points.append((dt, float(close) * conv))
+            points.sort(key=lambda x: x[0])
+            return points
+    except Exception as e:
+        print(f"⚠️ Error fetching hourly prices for {symbol}: {e}")
+    return []
+
+
+def reconstruct_intraday_portfolio_history(
+    db: Session,
+    period: str,
+    category: Optional[str] = None,
+    asset_id: Optional[str] = None
+) -> List[Dict]:
+    """Reconstruye el histórico intradía de cartera (por horas) para 24h y 7d."""
+    if period == "24h":
+        range_str = "2d"
+        hours_to_generate = 24
+    elif period == "7d":
+        range_str = "7d"
+        hours_to_generate = 168
+    else:
+        range_str = "2d"
+        hours_to_generate = 24
+
+    # Obtener activos filtrados
+    assets = get_assets(db)
+    if category:
+        assets = [a for a in assets if a.category == category]
+    if asset_id:
+        assets = [a for a in assets if a.id == asset_id]
+
+    # Excluir idx_1 si hay cuentas Indexa individuales
+    individual_indexa = [a for a in assets if a.id.startswith('idx_') and a.id != 'idx_1']
+    if individual_indexa:
+        assets = [a for a in assets if a.id != 'idx_1']
+
+    if not assets:
+        return []
+
+    # Mapeo de activos a sus respectivos símbolos de Yahoo
+    DYNAMIC_ASSETS_MAPPING = {
+        "goog": "GOOG",
+        "spot": "SPOT",
+        "el": "EL.PA",
+        "btbt": "BTBT",
+        "btc": "BTC-EUR",
+        "eth": "ETH-EUR",
+        "sol": "SOL-EUR",
+        "bnb": "BNB-EUR"
+    }
+
+    dynamic_assets = []
+    static_assets = []
+
+    for a in assets:
+        sym = DYNAMIC_ASSETS_MAPPING.get(a.id.lower())
+        if not sym and a.yahoo_symbol and not a.manual:
+            sym = a.yahoo_symbol
+
+        if sym and a.quantity > 0:
+            dynamic_assets.append((a, sym))
+        else:
+            static_assets.append(a)
+
+    # Sumar baseline de activos estáticos
+    static_value = sum(a.price_eur * a.quantity for a in static_assets)
+
+    # Obtener tasa de cambio USD/EUR
+    usd_to_eur = fetch_usd_eur_rate() or 0.96
+
+    fetched_data = {}
+
+    def fetch_worker(asset_id_str, symbol_str):
+        prices = fetch_yahoo_hourly_prices(symbol_str, range_str, usd_to_eur)
+        return asset_id_str, prices
+
+    # Paralelizar llamadas a Yahoo Finance
+    if dynamic_assets:
+        with ThreadPoolExecutor(max_workers=min(len(dynamic_assets), 8)) as executor:
+            futures = [executor.submit(fetch_worker, a.id, sym) for a, sym in dynamic_assets]
+            for fut in futures:
+                try:
+                    aid, prices = fut.result()
+                    fetched_data[aid] = prices
+                except Exception as e:
+                    print(f"⚠️ Thread fetch error: {e}")
+
+    # Generar serie temporal horaria de atrás hacia adelante (cronológica)
+    now = datetime.now(timezone.utc)
+    timestamps = [now - timedelta(hours=h) for h in range(hours_to_generate, -1, -1)]
+
+    result = []
+    last_known_price = {a.id: a.price_eur for a, _ in dynamic_assets}
+
+    for ts in timestamps:
+        total = static_value
+        for a, _ in dynamic_assets:
+            prices = fetched_data.get(a.id, [])
+            # Encontrar el precio más reciente antes o igual al timestamp
+            matching_prices = [p for dt, p in prices if dt <= ts]
+            if matching_prices:
+                last_known_price[a.id] = matching_prices[-1]
+            elif prices:
+                # Si el timestamp es anterior a todos, usar el primer precio disponible
+                last_known_price[a.id] = prices[0][1]
+            
+            total += last_known_price[a.id] * a.quantity
+
+        if total > 0:
+            result.append({
+                "date": ts.isoformat(),
+                "value": round(total, 2)
+            })
+
     return result
 
 

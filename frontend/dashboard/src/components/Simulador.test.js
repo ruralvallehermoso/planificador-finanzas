@@ -3,7 +3,9 @@ import { createSimulatorView, setupSimulatorListeners } from './Simulador.js';
 
 // Mock dependnecies
 vi.mock('chart.js', () => ({
-    Chart: class { }
+    Chart: {
+        register: vi.fn(),
+    }
 }));
 
 vi.mock('../config.js', () => ({
