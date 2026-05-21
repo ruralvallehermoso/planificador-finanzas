@@ -40,6 +40,12 @@ async def lifespan(app: FastAPI):
                 if asset_data.id in current:
                     existing = current[asset_data.id]
                     
+                    # Generic Metadata Sync (ensure currency/config matches seed)
+                    if existing.currency != asset_data.currency:
+                         print(f"🔄 Updating Metadata (Currency) for {asset_data.id}: {existing.currency} -> {asset_data.currency}")
+                         existing.currency = asset_data.currency
+                         db.commit()
+
                     # FORCE UPDATE ING to 15000 unconditionally
                     if asset_data.id == "ing":
                          print(f"🔥 FORCE UPDATING ING: {existing.price_eur} -> {asset_data.price_eur}")
@@ -90,7 +96,7 @@ def root():
 
 @app.get("/api/sanity")
 def sanity():
-    return {"status": "alive", "version": "v7-CHANGES-RESTORED", "timestamp": "CHECK_DEBUG_DEPLOY_3", "mode": "full_code"}
+    return {"status": "alive", "version": "v9-SIM-DEBUG", "timestamp": "CHECK_DEBUG_DEPLOY_5", "mode": "full_code"}
 
 @app.get("/api/health")
 def health_check():
@@ -197,10 +203,22 @@ def update_markets(db: Session = Depends(get_db)):
         yahoo_symbols = {a.id: a.yahoo_symbol for a in assets if a.yahoo_symbol and not a.manual}
         yahoo_prices = market_client.fetch_yahoo_prices(yahoo_symbols, usd_to_eur=usd_to_eur)
         
-        # 3. Criptos (CoinGecko)
+        # 3. Criptos (CoinGecko + CryptoCompare Fallback)
         cg_ids = {a.id: a.coingecko_id for a in assets if a.coingecko_id and not a.manual}
         cg_prices = market_client.fetch_coingecko_prices(cg_ids)
         
+        # Identify missing prices to fallback
+        missing_crypto_assets = {
+            a.id: a.ticker 
+            for a in assets 
+            if a.coingecko_id and not a.manual and a.id not in cg_prices and a.ticker
+        }
+        
+        if missing_crypto_assets:
+            print(f"⚠️ Fallback to CryptoCompare for {len(missing_crypto_assets)} assets: {list(missing_crypto_assets.values())}")
+            cc_prices = market_client.fetch_cryptocompare_prices(missing_crypto_assets)
+            cg_prices.update(cc_prices)
+
         # 4. Indexa - Update both total (idx_1) and individual accounts
         indexa_data = market_client.fetch_indexa_accounts()
         indexa_prices = {}
@@ -241,6 +259,10 @@ def get_portfolio_history(
     asset_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    if period in ("24h", "7d"):
+        history = crud.reconstruct_intraday_portfolio_history(db, period, category, asset_id)
+        return [schemas.PortfolioHistoryPoint(date=h["date"], value=h["value"]) for h in history]
+
     start_date, end_date = crud.get_period_dates(period)
     # 1. Try snapshots
     snapshots = crud.get_portfolio_snapshots(db, start_date, end_date, category, asset_id)
