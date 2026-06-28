@@ -1,0 +1,835 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/Header.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/components</a> Header.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/250</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/250</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >/**</span></span></span>
+<span class="cstat-no" title="statement not covered" > * Header component</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >import { formatEUR, formatCurrency } from '../utils/formatters.js';</span>
+<span class="cstat-no" title="statement not covered" >import { getActiveFilter, setActiveFilter, getTotalValue, getUsdToEur, getDisplayCurrency, setDisplayCurrency, convertValue } from '../data/assets.js';</span>
+<span class="cstat-no" title="statement not covered" >import { toggleTheme, updateThemeIcons } from '../utils/theme.js';</span>
+<span class="cstat-no" title="statement not covered" >import { renderSparkline } from './SparklineChart.js';</span>
+<span class="cstat-no" title="statement not covered" >import { fetchPortfolioHistory, fetchPortfolioPerformance } from '../services/history.js';</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const FILTERS = ['All', 'Cripto', 'Acciones', 'Fondos'];</span>
+<span class="cstat-no" title="statement not covered" >const FILTER_LABELS = { 'All': 'TODO', 'Cripto': 'CRIPTO', 'Acciones': 'ACCIONES', 'Fondos': 'FONDOS' };</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/**</span>
+<span class="cstat-no" title="statement not covered" > * Create header HTML</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" >export function createHeader() {</span>
+<span class="cstat-no" title="statement not covered" >    return `</span>
+<span class="cstat-no" title="statement not covered" >    &lt;div class="header-container"&gt;</span>
+<span class="cstat-no" title="statement not covered" >        &lt;div class="header-content"&gt;</span>
+<span class="cstat-no" title="statement not covered" >            &lt;div class="header-left"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;div class="logo"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;svg class="logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        &lt;path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"</span>
+<span class="cstat-no" title="statement not covered" >                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;/svg&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;div class="logo-text"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;h1&gt;Master Portfolio &lt;span style="font-size: 9px; font-weight: normal; color: #94a3b8;"&gt;v2.1&lt;/span&gt;&lt;/h1&gt;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >                &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >            &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >            &lt;div class="filter-buttons" id="filter-buttons"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                ${FILTERS.map(f =&gt; `</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;button class="filter-btn ${f === 'All' ? 'active' : ''}" data-filter="${f}"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        ${FILTER_LABELS[f]}</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" >                `).join('')}</span>
+<span class="cstat-no" title="statement not covered" >            &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >            &lt;div class="header-right"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;button class="icon-btn" id="theme-toggle" title="Cambiar Tema"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;svg id="theme-toggle-dark-icon" class="hidden" fill="currentColor" viewBox="0 0 20 20"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        &lt;path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"&gt;&lt;/path&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;/svg&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;svg id="theme-toggle-light-icon" class="hidden" fill="currentColor" viewBox="0 0 20 20"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        &lt;path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"</span>
+<span class="cstat-no" title="statement not covered" >                            fill-rule="evenodd" clip-rule="evenodd"&gt;&lt;/path&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;/svg&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >                &lt;button class="icon-btn" id="refresh-btn" title="Forzar Actualización"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;svg id="refresh-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        &lt;path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"</span>
+<span class="cstat-no" title="statement not covered" >                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;/svg&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >                &lt;button class="icon-btn currency-toggle" id="currency-toggle" title="Cambiar Divisa"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;span class="currency-symbol" id="currency-symbol"&gt;€&lt;/span&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >                &lt;div class="total-display-wrapper"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;canvas id="portfolio-sparkline" width="100" height="40" class="portfolio-sparkline"&gt;&lt;/canvas&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;div class="total-display"&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        &lt;p class="total-label" id="total-label"&gt;PATRIMONIO GLOBAL&lt;/p&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        &lt;p class="total-value" id="global-total"&gt;---&lt;/p&gt;</span>
+<span class="cstat-no" title="statement not covered" >                        &lt;p class="total-change" id="global-change"&gt;&lt;/p&gt;</span>
+<span class="cstat-no" title="statement not covered" >                    &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >                &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >            &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >        &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >    &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >    `;</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/**</span>
+<span class="cstat-no" title="statement not covered" > * Setup header event listeners</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" >export function setupHeaderListeners(onRefresh, onFilterChange) {</span>
+<span class="cstat-no" title="statement not covered" >    // Theme toggle</span>
+<span class="cstat-no" title="statement not covered" >    const themeBtn = document.getElementById('theme-toggle');</span>
+<span class="cstat-no" title="statement not covered" >    if (themeBtn) {</span>
+<span class="cstat-no" title="statement not covered" >        themeBtn.addEventListener('click', () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >            toggleTheme();</span>
+<span class="cstat-no" title="statement not covered" >            // Trigger re-render for chart colors</span>
+<span class="cstat-no" title="statement not covered" >            if (onFilterChange) onFilterChange(getActiveFilter());</span>
+<span class="cstat-no" title="statement not covered" >        });</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // Refresh button</span>
+<span class="cstat-no" title="statement not covered" >    const refreshBtn = document.getElementById('refresh-btn');</span>
+<span class="cstat-no" title="statement not covered" >    if (refreshBtn) {</span>
+<span class="cstat-no" title="statement not covered" >        refreshBtn.addEventListener('click', onRefresh);</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // Status area click</span>
+<span class="cstat-no" title="statement not covered" >    const statusArea = document.getElementById('status-area');</span>
+<span class="cstat-no" title="statement not covered" >    if (statusArea) {</span>
+<span class="cstat-no" title="statement not covered" >        statusArea.addEventListener('click', onRefresh);</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // Filter buttons</span>
+<span class="cstat-no" title="statement not covered" >    const filterBtns = document.querySelectorAll('.filter-btn');</span>
+<span class="cstat-no" title="statement not covered" >    filterBtns.forEach(btn =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >        btn.addEventListener('click', () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >            const filter = btn.dataset.filter;</span>
+<span class="cstat-no" title="statement not covered" >            setActiveFilter(filter);</span>
+<span class="cstat-no" title="statement not covered" >            updateFilterButtons(filter);</span>
+<span class="cstat-no" title="statement not covered" >            if (onFilterChange) onFilterChange(filter);</span>
+<span class="cstat-no" title="statement not covered" >        });</span>
+<span class="cstat-no" title="statement not covered" >    });</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // Currency toggle</span>
+<span class="cstat-no" title="statement not covered" >    const currencyBtn = document.getElementById('currency-toggle');</span>
+<span class="cstat-no" title="statement not covered" >    if (currencyBtn) {</span>
+<span class="cstat-no" title="statement not covered" >        currencyBtn.addEventListener('click', () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >            const current = getDisplayCurrency();</span>
+<span class="cstat-no" title="statement not covered" >            const newCurrency = current === 'EUR' ? 'USD' : 'EUR';</span>
+<span class="cstat-no" title="statement not covered" >            setDisplayCurrency(newCurrency);</span>
+<span class="cstat-no" title="statement not covered" >            updateCurrencyIcon(newCurrency);</span>
+<span class="cstat-no" title="statement not covered" >            // Trigger re-render to update all values</span>
+<span class="cstat-no" title="statement not covered" >            if (onFilterChange) onFilterChange(getActiveFilter());</span>
+<span class="cstat-no" title="statement not covered" >        });</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // Initialize theme icons</span>
+<span class="cstat-no" title="statement not covered" >    updateThemeIcons();</span>
+<span class="cstat-no" title="statement not covered" >    // Initialize currency icon</span>
+<span class="cstat-no" title="statement not covered" >    updateCurrencyIcon(getDisplayCurrency());</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/**</span>
+<span class="cstat-no" title="statement not covered" > * Update filter button styles</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" >function updateFilterButtons(activeFilter) {</span>
+<span class="cstat-no" title="statement not covered" >    const buttons = document.querySelectorAll('.filter-btn');</span>
+<span class="cstat-no" title="statement not covered" >    buttons.forEach(btn =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >        const filter = btn.dataset.filter;</span>
+<span class="cstat-no" title="statement not covered" >        btn.classList.remove('active', 'filter-cripto', 'filter-acciones', 'filter-fondos');</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >        if (filter === activeFilter) {</span>
+<span class="cstat-no" title="statement not covered" >            btn.classList.add('active');</span>
+<span class="cstat-no" title="statement not covered" >            if (filter === 'Cripto') btn.classList.add('filter-cripto');</span>
+<span class="cstat-no" title="statement not covered" >            if (filter === 'Acciones') btn.classList.add('filter-acciones');</span>
+<span class="cstat-no" title="statement not covered" >            if (filter === 'Fondos') btn.classList.add('filter-fondos');</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    });</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/**</span>
+<span class="cstat-no" title="statement not covered" > * Update header totals</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" >export function updateHeaderTotals(filter) {</span>
+<span class="cstat-no" title="statement not covered" >    const totalLabel = document.getElementById('total-label');</span>
+<span class="cstat-no" title="statement not covered" >    const totalValue = document.getElementById('global-total');</span>
+<span class="cstat-no" title="statement not covered" >    const usdRate = document.getElementById('usd-rate');</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const total = getTotalValue(filter);</span>
+<span class="cstat-no" title="statement not covered" >    const currency = getDisplayCurrency();</span>
+<span class="cstat-no" title="statement not covered" >    const displayValue = convertValue(total);</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    if (totalLabel) {</span>
+<span class="cstat-no" title="statement not covered" >        totalLabel.textContent = filter === 'All' ? 'PATRIMONIO GLOBAL' : `VALOR ${filter.toUpperCase()}`;</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    if (totalValue) {</span>
+<span class="cstat-no" title="statement not covered" >        totalValue.textContent = formatCurrency(displayValue, currency);</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/**</span>
+<span class="cstat-no" title="statement not covered" > * Update currency icon in header</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" >function updateCurrencyIcon(currency) {</span>
+<span class="cstat-no" title="statement not covered" >    const symbol = document.getElementById('currency-symbol');</span>
+<span class="cstat-no" title="statement not covered" >    if (symbol) {</span>
+<span class="cstat-no" title="statement not covered" >        symbol.textContent = currency === 'EUR' ? '€' : '$';</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/**</span>
+<span class="cstat-no" title="statement not covered" > * Set loading state</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" >export function setLoading(loading) {</span>
+<span class="cstat-no" title="statement not covered" >    const icon = document.getElementById('refresh-icon');</span>
+<span class="cstat-no" title="statement not covered" >    const dot = document.getElementById('status-dot');</span>
+<span class="cstat-no" title="statement not covered" >    const text = document.getElementById('status-text');</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    if (loading) {</span>
+<span class="cstat-no" title="statement not covered" >        if (icon) icon.classList.add('spin');</span>
+<span class="cstat-no" title="statement not covered" >        if (dot) dot.className = 'status-dot loading';</span>
+<span class="cstat-no" title="statement not covered" >        if (text) {</span>
+<span class="cstat-no" title="statement not covered" >            text.textContent = 'ACTUALIZANDO...';</span>
+<span class="cstat-no" title="statement not covered" >            text.className = 'status-text loading';</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    } else {</span>
+<span class="cstat-no" title="statement not covered" >        if (icon) icon.classList.remove('spin');</span>
+<span class="cstat-no" title="statement not covered" >        if (dot) dot.className = 'status-dot online';</span>
+<span class="cstat-no" title="statement not covered" >        if (text) {</span>
+<span class="cstat-no" title="statement not covered" >            text.textContent = 'ACTUALIZADO';</span>
+<span class="cstat-no" title="statement not covered" >            text.className = 'status-text online';</span>
+<span class="cstat-no" title="statement not covered" >            setTimeout(() =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >                if (text) text.className = 'status-text';</span>
+<span class="cstat-no" title="statement not covered" >            }, 3000);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/**</span>
+<span class="cstat-no" title="statement not covered" > * Render portfolio sparkline chart</span>
+<span class="cstat-no" title="statement not covered" > * @param {string} filter - Current filter (All, Cripto, Acciones, Fondos)</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" >export async function renderPortfolioSparkline(filter) {</span>
+<span class="cstat-no" title="statement not covered" >    const changeEl = document.getElementById('global-change');</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+<span class="cstat-no" title="statement not covered" >        // Fetch data based on filter</span>
+<span class="cstat-no" title="statement not covered" >        const category = filter === 'All' ? null : filter;</span>
+<span class="cstat-no" title="statement not covered" >        const [history, perf24h] = await Promise.all([</span>
+<span class="cstat-no" title="statement not covered" >            fetchPortfolioHistory('7d', category, null),</span>
+<span class="cstat-no" title="statement not covered" >            fetchPortfolioPerformance('24h', category, null)</span>
+<span class="cstat-no" title="statement not covered" >        ]);</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >        // Get frontend's live current value</span>
+<span class="cstat-no" title="statement not covered" >        const currentValue = getTotalValue(filter);</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >        // Render sparkline - add current value as last point for accuracy</span>
+<span class="cstat-no" title="statement not covered" >        if (history &amp;&amp; history.length &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >            const values = history.map(h =&gt; h.value);</span>
+<span class="cstat-no" title="statement not covered" >            values.push(currentValue); // Add live value as last point</span>
+<span class="cstat-no" title="statement not covered" >            const isPositive = currentValue &gt;= values[0];</span>
+<span class="cstat-no" title="statement not covered" >            renderSparkline('portfolio-sparkline', values, isPositive, 100, 40);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >        // Update 24h change display using frontend's live value</span>
+<span class="cstat-no" title="statement not covered" >        if (changeEl &amp;&amp; perf24h &amp;&amp; perf24h.previous_value &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >            // Calculate change using frontend's current value vs backend's previous value</span>
+<span class="cstat-no" title="statement not covered" >            const changeAbsolute = currentValue - perf24h.previous_value;</span>
+<span class="cstat-no" title="statement not covered" >            const changePercent = (changeAbsolute / perf24h.previous_value) * 100;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >            const sign = changePercent &gt;= 0 ? '+' : '';</span>
+<span class="cstat-no" title="statement not covered" >            changeEl.textContent = `24h: ${sign}${changePercent.toFixed(2)}%`;</span>
+<span class="cstat-no" title="statement not covered" >            changeEl.className = `total-change ${changePercent &gt;= 0 ? 'positive' : 'negative'}`;</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    } catch (e) {</span>
+<span class="cstat-no" title="statement not covered" >        console.error('Error rendering portfolio sparkline:', e);</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-05-01T10:31:35.546Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

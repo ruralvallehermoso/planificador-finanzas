@@ -14,7 +14,7 @@ def get_initial_assets() -> list[schemas.AssetCreate]:
             ticker="GOOG",
             category="Acciones",
             platform="Google",
-            quantity=390,
+            quantity=444,
             price_eur=246.95,
             yahoo_symbol="GOOG",
             currency="USD",
