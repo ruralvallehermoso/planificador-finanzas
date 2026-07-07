@@ -468,6 +468,10 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
             if "23LLWQDX" in a.name or "23LLWQDX" in a.id or (a.id == "idx_1" and "Indexa" in a.category):
                  initial_val -= 5000.0
                  
+            # Withdrawal from Margarita (12.612,86€ total withdrawal, adjusting weighted portion to fix profit)
+            if "76B4EQKT" in a.name or "76B4EQKT" in a.id:
+                 initial_val -= (12612.86 * weight)
+                 
             change_pct = ((current_val - initial_val) / initial_val * 100) if initial_val > 0 else 0.0
             
             display_name = a.name
