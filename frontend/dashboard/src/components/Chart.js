@@ -21,6 +21,7 @@ const CATEGORY_COLORS = {
     'Acciones': '#6366f1',
     'Cripto': '#10b981',
     'Fondos': '#f59e0b',
+    'Renta Fija': '#06b6d4',
     'Cash': '#ec4899'
 };
 
@@ -58,14 +59,19 @@ export function renderChart(filter) {
 
     if (filter === 'All') {
         // Show category breakdown
-        const groups = { 'Acciones': 0, 'Cripto': 0, 'Fondos': 0, 'Cash': 0 };
+        const groups = { 'Acciones': 0, 'Cripto': 0, 'Fondos': 0, 'Renta Fija': 0, 'Cash': 0 };
         getAssets('All').forEach(item => {
             if (groups[item.cat] !== undefined) {
                 groups[item.cat] += item.price * item.qty;
+            } else {
+                groups[item.cat] = item.price * item.qty;
             }
         });
-        labels = Object.keys(groups);
-        data = Object.values(groups);
+        
+        // Only show categories with value > 0
+        const activeCategories = Object.entries(groups).filter(([_, val]) => val > 0);
+        labels = activeCategories.map(([cat]) => cat);
+        data = activeCategories.map(([_, val]) => val);
         colors = labels.map(l => CATEGORY_COLORS[l] || '#888');
     } else {
         // Show top 10 assets in category

@@ -37,8 +37,10 @@ export async function loadAssetsFromAPI() {
             currency: a.currency || 'EUR',
             yahoo: a.yahoo_symbol || null,
             api_id: a.coingecko_id || null,
+            coincap_id: a.coincap_id || null,
             indexa_api: a.indexa_api || false,
             manual: a.manual || false,
+            coupon_rate: a.coupon_rate || null,
             img: a.image_url || 'https://via.placeholder.com/64',
             change24h: a.change_24h_pct || 0.0
         }));
@@ -150,6 +152,109 @@ export function getTotalValue(filter = 'All') {
 }
 
 /**
+ * Update an asset's properties and persist to backend
+ */
+export async function updateAssetAPI(id, updates) {
+    updateAsset(id, updates);
+    try {
+        const payload = {};
+        if (updates.qty !== undefined) payload.quantity = updates.qty;
+        if (updates.price !== undefined) payload.price_eur = updates.price;
+        if (updates.name !== undefined) payload.name = updates.name;
+        if (updates.ticker !== undefined) payload.ticker = updates.ticker;
+        if (updates.cat !== undefined) payload.category = updates.cat;
+        if (updates.plat !== undefined) payload.platform = updates.plat;
+        if (updates.yahoo !== undefined) payload.yahoo_symbol = updates.yahoo;
+        if (updates.coupon_rate !== undefined) payload.coupon_rate = updates.coupon_rate;
+        if (updates.manual !== undefined) payload.manual = updates.manual;
+
+        const res = await fetch(`${BACKEND_URL}/api/assets/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return res.ok;
+    } catch (e) {
+        console.error(`Error updating asset ${id} on backend:`, e);
+        return false;
+    }
+}
+
+/**
+ * Create a new asset and persist to backend
+ */
+export async function createAssetAPI(assetData) {
+    try {
+        const payload = {
+            id: assetData.id || assetData.name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 16) + '_' + Date.now().toString().slice(-4),
+            name: assetData.name,
+            ticker: assetData.ticker || '',
+            category: assetData.cat || assetData.category,
+            platform: assetData.plat || assetData.platform || '',
+            quantity: parseFloat(assetData.qty || assetData.quantity || 0),
+            price_eur: parseFloat(assetData.price || assetData.price_eur || 1.0),
+            currency: assetData.currency || 'EUR',
+            yahoo_symbol: assetData.yahoo || assetData.yahoo_symbol || null,
+            coingecko_id: assetData.api_id || assetData.coingecko_id || null,
+            coincap_id: assetData.coincap_id || null,
+            indexa_api: false,
+            manual: assetData.manual !== undefined ? assetData.manual : (assetData.cat === 'Cash' || !assetData.yahoo),
+            coupon_rate: assetData.coupon_rate ? parseFloat(assetData.coupon_rate) : null,
+            image_url: assetData.img || assetData.image_url || null
+        };
+
+        const res = await fetch(`${BACKEND_URL}/api/assets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            const created = await res.json();
+            addAsset({
+                id: created.id,
+                name: created.name,
+                ticker: created.ticker || '',
+                cat: created.category,
+                plat: created.platform || '',
+                qty: created.quantity,
+                price: created.price_eur,
+                currency: created.currency || 'EUR',
+                yahoo: created.yahoo_symbol || null,
+                api_id: created.coingecko_id || null,
+                coincap_id: created.coincap_id || null,
+                indexa_api: created.indexa_api || false,
+                manual: created.manual || false,
+                coupon_rate: created.coupon_rate || null,
+                img: created.image_url || 'https://via.placeholder.com/64',
+                change24h: 0.0
+            });
+            return created;
+        }
+        return null;
+    } catch (e) {
+        console.error('Error creating asset on backend:', e);
+        return null;
+    }
+}
+
+/**
+ * Delete an asset from backend and state
+ */
+export async function deleteAssetAPI(id) {
+    removeAsset(id);
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/assets/${id}`, {
+            method: 'DELETE'
+        });
+        return res.ok;
+    } catch (e) {
+        console.error(`Error deleting asset ${id} on backend:`, e);
+        return false;
+    }
+}
+
+/**
  * Get assets with crypto API IDs
  */
 export function getCryptoAssets() {
@@ -157,10 +262,17 @@ export function getCryptoAssets() {
 }
 
 /**
- * Get assets with Yahoo Finance tickers
+ * Get assets with Yahoo Finance tickers (stocks and bonds)
  */
 export function getStockAssets() {
     return state.assets.filter(a => a.yahoo && !a.manual);
+}
+
+/**
+ * Get bond/fixed income assets
+ */
+export function getBondAssets() {
+    return state.assets.filter(a => a.cat === 'Renta Fija' || a.coupon_rate);
 }
 
 /**

@@ -365,6 +365,20 @@ def get_initial_assets() -> list[schemas.AssetCreate]:
             manual=True,
             image_url="https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://ing.es&size=64",
         ),
+        # === Renta Fija ===
+        dict(
+            id="bono_es_10y",
+            name="Bonos Estado Español 10A (3.7%)",
+            ticker="ES10Y",
+            category="Renta Fija",
+            platform="Tesoro / ING",
+            quantity=30000,
+            price_eur=1.0,
+            yahoo_symbol="10YESP.BD",
+            coupon_rate=3.7,
+            manual=False,
+            image_url="https://flagcdn.com/w80/es.png",
+        ),
     ]
 
     return [schemas.AssetCreate(**item) for item in raw]

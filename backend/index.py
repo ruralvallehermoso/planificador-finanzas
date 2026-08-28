@@ -45,6 +45,9 @@ async def lifespan(app: FastAPI):
                          print(f"🔄 Updating Metadata (Currency) for {asset_data.id}: {existing.currency} -> {asset_data.currency}")
                          existing.currency = asset_data.currency
                          db.commit()
+                    if getattr(existing, 'coupon_rate', None) != asset_data.coupon_rate:
+                         existing.coupon_rate = asset_data.coupon_rate
+                         db.commit()
 
                     # FORCE UPDATE ING to 15000 unconditionally
                     if asset_data.id == "ing":
@@ -115,6 +118,41 @@ def list_assets(category: Optional[str] = None):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"ASSETS ERROR: {str(e)}")
+
+@app.post("/api/assets", response_model=schemas.Asset)
+def create_asset(asset: schemas.AssetCreate, db: Session = Depends(get_db)):
+    try:
+        created = crud.create_asset_direct(db, asset)
+        return created
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CREATE ASSET ERROR: {str(e)}")
+
+@app.get("/api/assets/{asset_id}", response_model=schemas.AssetDetail)
+def get_asset_detail(asset_id: str, db: Session = Depends(get_db)):
+    asset = crud.get_asset(db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    history_models = crud.get_history_for_asset(db, asset_id)
+    history = [
+        schemas.HistoricalPoint(date=h.date, price_eur=h.price_eur) for h in history_models
+    ]
+    return schemas.AssetDetail(
+        **schemas.Asset.model_validate(asset).model_dump(), history=history
+    )
+
+@app.put("/api/assets/{asset_id}", response_model=schemas.Asset)
+def update_asset(asset_id: str, data: schemas.AssetUpdate, db: Session = Depends(get_db)):
+    asset = crud.update_asset(db, asset_id, data)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    return asset
+
+@app.delete("/api/assets/{asset_id}")
+def delete_asset(asset_id: str, db: Session = Depends(get_db)):
+    success = crud.delete_asset(db, asset_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    return {"success": True, "deleted": asset_id}
 
 @app.get("/api/assets/changes")
 def get_assets_24h_changes(min_value: float = 1000, db: Session = Depends(get_db)):
@@ -191,7 +229,7 @@ def get_amortization_schedule(params: schemas.MortgageParams):
 @app.post("/api/update_markets")
 @app.post("/api/markets/update")  # Alias for frontend compatibility
 def update_markets(db: Session = Depends(get_db)):
-    """Actualiza precios de mercado (Yahoo, CoinGecko, Indexa)"""
+    """Actualiza precios de mercado (Yahoo, Bonos/Renta Fija, CoinGecko, Indexa)"""
     try:
         import market_client
         assets = crud.get_assets(db)
@@ -199,11 +237,15 @@ def update_markets(db: Session = Depends(get_db)):
         # 1. Ratio USD/EUR
         usd_to_eur = market_client.fetch_usd_eur_rate()
         
-        # 2. Acciones (Yahoo)
-        yahoo_symbols = {a.id: a.yahoo_symbol for a in assets if a.yahoo_symbol and not a.manual}
+        # 2. Renta Fija (Bonos con cupón / TIR o ticker)
+        bond_assets = [a for a in assets if a.category == "Renta Fija" or a.coupon_rate]
+        bond_prices = market_client.fetch_bond_prices(bond_assets, usd_to_eur=usd_to_eur)
+        
+        # 3. Acciones y Fondos (Yahoo)
+        yahoo_symbols = {a.id: a.yahoo_symbol for a in assets if a.yahoo_symbol and not a.manual and a.id not in bond_prices}
         yahoo_prices = market_client.fetch_yahoo_prices(yahoo_symbols, usd_to_eur=usd_to_eur)
         
-        # 3. Criptos (CoinGecko + CryptoCompare Fallback)
+        # 4. Criptos (CoinGecko + CryptoCompare Fallback)
         cg_ids = {a.id: a.coingecko_id for a in assets if a.coingecko_id and not a.manual}
         cg_prices = market_client.fetch_coingecko_prices(cg_ids)
         
@@ -219,7 +261,7 @@ def update_markets(db: Session = Depends(get_db)):
             cc_prices = market_client.fetch_cryptocompare_prices(missing_crypto_assets)
             cg_prices.update(cc_prices)
 
-        # 4. Indexa - Update both total (idx_1) and individual accounts
+        # 5. Indexa - Update both total (idx_1) and individual accounts
         indexa_data = market_client.fetch_indexa_accounts()
         indexa_prices = {}
         if indexa_data and indexa_data.get("success"):
@@ -231,7 +273,7 @@ def update_markets(db: Session = Depends(get_db)):
                 acc_id = f"idx_{account['account_number']}"
                 indexa_prices[acc_id] = float(account['market_value'])
         
-        merged_prices = {**yahoo_prices, **cg_prices, **indexa_prices}
+        merged_prices = {**yahoo_prices, **bond_prices, **cg_prices, **indexa_prices}
         crud.update_prices_bulk(db, merged_prices)
         
         # Save History

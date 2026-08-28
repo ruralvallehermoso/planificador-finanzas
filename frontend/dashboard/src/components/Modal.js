@@ -1,10 +1,11 @@
 /**
- * Edit modal component
+ * Modal component for Asset Editing and Asset Creation
  */
 
-import { getAssetById, updateAsset } from '../data/assets.js';
+import { getAssetById, updateAsset, updateAssetAPI, createAssetAPI, deleteAssetAPI } from '../data/assets.js';
 
 let currentAssetId = null;
+let isCreationMode = false;
 let onSaveCallback = null;
 
 /**
@@ -14,18 +15,59 @@ export function createModal() {
     return `
     <div id="editModal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h3 class="modal-title">Ajuste Manual</h3>
-            <p class="modal-subtitle">Edita la <span class="font-bold">CANTIDAD</span> o el PRECIO.</p>
+            <h3 class="modal-title" id="modal-title">Ajuste Manual</h3>
+            <p class="modal-subtitle" id="modal-subtitle">Edita la <span class="font-bold">CANTIDAD</span> o el PRECIO.</p>
             
-            <label class="input-label">Cantidad (Tokens/Acciones)</label>
-            <input type="number" step="any" id="manual-qty" class="modal-input">
-            
-            <label class="input-label">Precio Unitario (€)</label>
-            <input type="number" step="any" id="manual-price" class="modal-input">
+            <div id="create-fields" class="hidden">
+                <label class="input-label">Categoría</label>
+                <select id="asset-cat" class="modal-input modal-select">
+                    <option value="Renta Fija">Renta Fija (Bonos/Deuda)</option>
+                    <option value="Acciones">Acciones</option>
+                    <option value="Cripto">Cripto</option>
+                    <option value="Fondos">Fondos</option>
+                    <option value="Cash">Cash / Liquidez</option>
+                </select>
+
+                <label class="input-label">Nombre del Activo</label>
+                <input type="text" id="asset-name" class="modal-input" placeholder="ej: Bonos Estado Español 10A">
+
+                <div class="modal-row">
+                    <div>
+                        <label class="input-label">Ticker</label>
+                        <input type="text" id="asset-ticker" class="modal-input" placeholder="ej: ES10Y">
+                    </div>
+                    <div>
+                        <label class="input-label">Plataforma</label>
+                        <input type="text" id="asset-plat" class="modal-input" placeholder="ej: Tesoro / ING">
+                    </div>
+                </div>
+
+                <div id="bond-fields">
+                    <label class="input-label">Rentabilidad / Cupón Anual (%)</label>
+                    <input type="number" step="0.01" id="asset-coupon" class="modal-input" placeholder="ej: 3.7">
+                </div>
+
+                <label class="input-label">Símbolo Yahoo Finance (opcional)</label>
+                <input type="text" id="asset-yahoo" class="modal-input" placeholder="ej: 10YESP.BD, ES10Y.BD, SPA.MC">
+            </div>
+
+            <div class="modal-row">
+                <div>
+                    <label class="input-label" id="label-qty">Cantidad / Inversión</label>
+                    <input type="number" step="any" id="manual-qty" class="modal-input" placeholder="30000">
+                </div>
+                <div>
+                    <label class="input-label" id="label-price">Precio Unitario (€)</label>
+                    <input type="number" step="any" id="manual-price" class="modal-input" placeholder="1.0">
+                </div>
+            </div>
             
             <div class="modal-actions">
-                <button id="modal-cancel" class="btn-cancel">Cancelar</button>
-                <button id="modal-save" class="btn-save">Guardar</button>
+                <button id="modal-delete" class="btn-delete hidden">Eliminar</button>
+                <div class="modal-actions-right">
+                    <button id="modal-cancel" class="btn-cancel">Cancelar</button>
+                    <button id="modal-save" class="btn-save">Guardar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -40,7 +82,9 @@ export function setupModalListeners(onSave) {
 
     const cancelBtn = document.getElementById('modal-cancel');
     const saveBtn = document.getElementById('modal-save');
+    const deleteBtn = document.getElementById('modal-delete');
     const modal = document.getElementById('editModal');
+    const catSelect = document.getElementById('asset-cat');
 
     if (cancelBtn) {
         cancelBtn.addEventListener('click', closeModal);
@@ -48,6 +92,19 @@ export function setupModalListeners(onSave) {
 
     if (saveBtn) {
         saveBtn.addEventListener('click', saveChanges);
+    }
+
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', deleteCurrentAsset);
+    }
+
+    if (catSelect) {
+        catSelect.addEventListener('change', () => {
+            const bondFields = document.getElementById('bond-fields');
+            if (bondFields) {
+                bondFields.style.display = (catSelect.value === 'Renta Fija') ? 'block' : 'none';
+            }
+        });
     }
 
     // Close on overlay click
@@ -61,17 +118,73 @@ export function setupModalListeners(onSave) {
 }
 
 /**
- * Open modal for editing an asset
+ * Open modal for adding a new asset
+ */
+export function openAddAssetModal() {
+    isCreationMode = true;
+    currentAssetId = null;
+
+    const modal = document.getElementById('editModal');
+    const title = document.getElementById('modal-title');
+    const subtitle = document.getElementById('modal-subtitle');
+    const createFields = document.getElementById('create-fields');
+    const deleteBtn = document.getElementById('modal-delete');
+
+    const catInput = document.getElementById('asset-cat');
+    const nameInput = document.getElementById('asset-name');
+    const tickerInput = document.getElementById('asset-ticker');
+    const platInput = document.getElementById('asset-plat');
+    const couponInput = document.getElementById('asset-coupon');
+    const yahooInput = document.getElementById('asset-yahoo');
+    const qtyInput = document.getElementById('manual-qty');
+    const priceInput = document.getElementById('manual-price');
+
+    if (title) title.textContent = 'Añadir Nuevo Activo';
+    if (subtitle) subtitle.textContent = 'Introduce los datos del activo (Renta Fija, Acciones, Cripto, Fondos...)';
+    if (createFields) createFields.classList.remove('hidden');
+    if (deleteBtn) deleteBtn.classList.add('hidden');
+
+    if (catInput) catInput.value = 'Renta Fija';
+    if (nameInput) nameInput.value = 'Bonos Estado Español 10A';
+    if (tickerInput) tickerInput.value = 'ES10Y';
+    if (platInput) platInput.value = 'Tesoro / ING';
+    if (couponInput) couponInput.value = '3.7';
+    if (yahooInput) yahooInput.value = '10YESP.BD';
+    if (qtyInput) qtyInput.value = '30000';
+    if (priceInput) priceInput.value = '1.0';
+
+    const bondFields = document.getElementById('bond-fields');
+    if (bondFields) bondFields.style.display = 'block';
+
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('visible');
+    }
+}
+
+/**
+ * Open modal for editing an existing asset
  */
 export function openModal(assetId) {
     const asset = getAssetById(assetId);
     if (!asset) return;
 
+    isCreationMode = false;
     currentAssetId = assetId;
 
     const modal = document.getElementById('editModal');
+    const title = document.getElementById('modal-title');
+    const subtitle = document.getElementById('modal-subtitle');
+    const createFields = document.getElementById('create-fields');
+    const deleteBtn = document.getElementById('modal-delete');
+
     const qtyInput = document.getElementById('manual-qty');
     const priceInput = document.getElementById('manual-price');
+
+    if (title) title.textContent = `Ajuste: ${asset.name}`;
+    if (subtitle) subtitle.textContent = `Edita la cantidad o precio de ${asset.name} (${asset.cat})`;
+    if (createFields) createFields.classList.add('hidden');
+    if (deleteBtn) deleteBtn.classList.remove('hidden');
 
     if (qtyInput) qtyInput.value = asset.qty;
     if (priceInput) priceInput.value = asset.price;
@@ -92,25 +205,57 @@ export function closeModal() {
         modal.classList.add('hidden');
     }
     currentAssetId = null;
+    isCreationMode = false;
+}
+
+/**
+ * Delete current asset
+ */
+async function deleteCurrentAsset() {
+    if (!currentAssetId) return;
+    if (!confirm('¿Estás seguro de que deseas eliminar este activo?')) return;
+
+    await deleteAssetAPI(currentAssetId);
+    closeModal();
+    if (onSaveCallback) onSaveCallback();
 }
 
 /**
  * Save changes from modal
  */
-function saveChanges() {
-    if (!currentAssetId) return;
-
+async function saveChanges() {
     const qtyInput = document.getElementById('manual-qty');
     const priceInput = document.getElementById('manual-price');
 
     const qty = parseFloat(qtyInput?.value || 0);
     const price = parseFloat(priceInput?.value || 0);
 
-    updateAsset(currentAssetId, {
-        qty,
-        price,
-        manual: true
-    });
+    if (isCreationMode) {
+        const cat = document.getElementById('asset-cat')?.value || 'Renta Fija';
+        const name = document.getElementById('asset-name')?.value || 'Nuevo Activo';
+        const ticker = document.getElementById('asset-ticker')?.value || '';
+        const plat = document.getElementById('asset-plat')?.value || '';
+        const coupon = parseFloat(document.getElementById('asset-coupon')?.value || 0);
+        const yahoo = document.getElementById('asset-yahoo')?.value || null;
+
+        await createAssetAPI({
+            name,
+            ticker,
+            cat,
+            plat,
+            qty,
+            price: price > 0 ? price : 1.0,
+            coupon_rate: coupon > 0 ? coupon : null,
+            yahoo: yahoo ? yahoo.trim() : null
+        });
+    } else {
+        if (!currentAssetId) return;
+        await updateAssetAPI(currentAssetId, {
+            qty,
+            price,
+            manual: true
+        });
+    }
 
     closeModal();
 
@@ -118,3 +263,4 @@ function saveChanges() {
         onSaveCallback();
     }
 }
+

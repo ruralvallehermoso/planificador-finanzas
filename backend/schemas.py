@@ -18,6 +18,7 @@ class AssetBase(BaseModel):
     coincap_id: Optional[str] = None
     indexa_api: bool = False
     manual: bool = False
+    coupon_rate: Optional[float] = None
     image_url: Optional[str] = None
 
 
@@ -26,9 +27,19 @@ class AssetCreate(AssetBase):
 
 
 class AssetUpdate(BaseModel):
+    name: Optional[str] = None
+    ticker: Optional[str] = None
+    category: Optional[str] = None
+    platform: Optional[str] = None
     quantity: Optional[float] = None
     price_eur: Optional[float] = None
+    currency: Optional[str] = None
+    yahoo_symbol: Optional[str] = None
+    coingecko_id: Optional[str] = None
+    coincap_id: Optional[str] = None
     manual: Optional[bool] = None
+    coupon_rate: Optional[float] = None
+    image_url: Optional[str] = None
 
 
 class Asset(AssetBase):

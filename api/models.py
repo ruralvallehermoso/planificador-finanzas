@@ -19,12 +19,13 @@ class Asset(Base):
 
     currency = Column(String, nullable=True)  # Por si se almacena en USD u otra
 
-    # Flags de actualización
+    # Flags de actualización y Renta Fija
     yahoo_symbol = Column(String, nullable=True)
     coingecko_id = Column(String, nullable=True)
     coincap_id = Column(String, nullable=True)  # CoinCap API asset ID
     indexa_api = Column(Boolean, default=False)
     manual = Column(Boolean, default=False)
+    coupon_rate = Column(Float, nullable=True)  # % de rentabilidad/cupón anual para Renta Fija (ej: 3.7)
 
     # Extras UI
     image_url = Column(String, nullable=True)

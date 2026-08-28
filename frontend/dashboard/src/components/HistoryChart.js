@@ -49,6 +49,7 @@ export function createHistoryChartContainer() {
                     <option value="Acciones">Acciones</option>
                     <option value="Cripto">Cripto</option>
                     <option value="Fondos">Fondos</option>
+                    <option value="Renta Fija">Renta Fija</option>
                     <option value="Cash">Cash</option>
                 </select>
                 <select class="history-select" id="history-asset-select">

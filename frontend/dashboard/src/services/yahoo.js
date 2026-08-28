@@ -66,10 +66,31 @@ export async function fetchStockPrices(assets, usdToEur) {
     const results = {};
 
     const promises = assets.map(async (asset) => {
+        if (!asset.yahoo) {
+            if (asset.coupon_rate && asset.coupon_rate > 0) {
+                const dailyRate = (asset.coupon_rate / 100) / 365;
+                results[asset.id] = (asset.price || 1.0) * (1 + dailyRate);
+            }
+            return;
+        }
+
         const price = await fetchStockPrice(asset.yahoo);
         if (price !== null) {
-            // Convert USD to EUR if needed
-            results[asset.id] = asset.currency === 'USD' ? price * usdToEur : price;
+            if (price > 5.0) {
+                results[asset.id] = asset.currency === 'USD' ? price * usdToEur : price;
+            } else if (price > 0 && price <= 15.0 && asset.coupon_rate) {
+                // Es una TIR/Yield de bono soberano (ej: 3.25%)
+                const duration = 8.5;
+                const yieldDiff = (asset.coupon_rate - price) / 100;
+                const adjustedFactor = Math.max(0.8, 1.0 + duration * yieldDiff);
+                const base = (asset.price <= 10.0) ? 1.0 : 100.0;
+                results[asset.id] = Number((base * adjustedFactor).toFixed(4));
+            } else {
+                results[asset.id] = asset.currency === 'USD' ? price * usdToEur : price;
+            }
+        } else if (asset.coupon_rate && asset.coupon_rate > 0) {
+            const dailyRate = (asset.coupon_rate / 100) / 365;
+            results[asset.id] = (asset.price || 1.0) * (1 + dailyRate);
         }
     });
 

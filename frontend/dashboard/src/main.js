@@ -30,7 +30,7 @@ import { createAssetTable, renderAssetTable, updateUsdRate } from './components/
 import { createChartContainer, renderChart } from './components/Chart.js';
 import { createTopAssets, renderTopAssets } from './components/TopAssets.js';
 import { createIndexaCard, renderIndexaCard } from './components/IndexaCard.js';
-import { createModal, setupModalListeners, openModal } from './components/Modal.js';
+import { createModal, setupModalListeners, openModal, openAddAssetModal } from './components/Modal.js';
 import { createPortfolioEvolution, setupEvolutionListeners, renderPortfolioEvolution } from './components/PortfolioEvolution.js';
 import {
     createHistoryChartContainer,
@@ -108,7 +108,7 @@ async function init() {
     `;
 
     // Setup event listeners
-    setupHeaderListeners(updateMarkets, handleFilterChange);
+    setupHeaderListeners(updateMarkets, handleFilterChange, openAddAssetModal);
     setupModalListeners(handleModalSave);
     setupViewToggle();
     setupHistoryListeners();
@@ -339,7 +339,8 @@ function handleFilterChange(filter) {
 /**
  * Handle modal save
  */
-function handleModalSave() {
+async function handleModalSave() {
+    await loadAssetsFromAPI();
     render();
 }
 

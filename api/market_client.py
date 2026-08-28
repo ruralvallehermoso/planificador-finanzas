@@ -88,6 +88,87 @@ def fetch_yahoo_prices(symbols: Dict[str, str], usd_to_eur: float | None = None)
     return prices
 
 
+def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict[str, float]:
+    """
+    Calcula o consulta el precio/rendimiento de activos de Renta Fija (Bonos).
+    - Si tiene yahoo_symbol, intenta consultar Yahoo Finance.
+    - Si la cotización de Yahoo es un precio estándar (> 5 EUR/USD), se normaliza y usa.
+    - Si la cotización de Yahoo es una TIR/Yield (< 15%), o si no hay conexión o es un bono a vencimiento:
+      aplica el devengo diario según el cupón anual (coupon_rate, ej: 3.7%).
+    """
+    prices: Dict[str, float] = {}
+    for bond in bonds:
+        asset_id = getattr(bond, "id", None) or (bond.get("id") if isinstance(bond, dict) else None)
+        if not asset_id:
+            continue
+        symbol = getattr(bond, "yahoo_symbol", None) or (bond.get("yahoo_symbol") if isinstance(bond, dict) else None)
+        coupon = getattr(bond, "coupon_rate", None) or (bond.get("coupon_rate") if isinstance(bond, dict) else None)
+        current_price = getattr(bond, "price_eur", 1.0) or (bond.get("price_eur", 1.0) if isinstance(bond, dict) else 1.0) or 1.0
+        
+        fetched = False
+        if symbol:
+            try:
+                url = YAHOO_CHART_URL.format(symbol=symbol)
+                res = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
+                if res.status_code == 200:
+                    data = res.json()
+                    chart_result = data.get("chart", {}).get("result", [])
+                    if chart_result and "meta" in chart_result[0]:
+                        raw_price = float(chart_result[0]["meta"].get("regularMarketPrice", 0.0))
+                        currency = chart_result[0]["meta"].get("currency", "EUR")
+                        
+                        # Si es un precio de ETF o bono en cotización directa (> 5):
+                        if raw_price > 5.0:
+                            if currency == "USD" and usd_to_eur:
+                                raw_price *= usd_to_eur
+                            prices[asset_id] = raw_price
+                            fetched = True
+                        elif raw_price > 0 and raw_price <= 15.0:
+                            # Es una TIR/Yield (ej: 3.25% para un bono del estado a 10 años)
+                            if coupon and coupon > 0:
+                                duration = 8.5  # Duración modificada típica para 10A
+                                yield_diff = (coupon - raw_price) / 100.0
+                                adjusted_factor = max(0.8, 1.0 + duration * yield_diff)
+                                base = 1.0 if current_price <= 10.0 else 100.0
+                                prices[asset_id] = round(base * adjusted_factor, 4)
+                                fetched = True
+            except Exception as e:
+                print(f"⚠️ Error fetching bond price from Yahoo for {asset_id} ({symbol}): {e}")
+
+        # Fallback / Devengo por cupón si no se obtuvo precio de mercado
+        if not fetched:
+            if coupon and coupon > 0:
+                daily_growth = (coupon / 100.0) / 365.0
+                new_price = current_price * (1.0 + daily_growth)
+                prices[asset_id] = round(new_price, 6)
+            else:
+                prices[asset_id] = current_price
+                
+    return prices
+
+
+def generate_bond_history(coupon_rate: float = 3.7, base_price: float = 1.0, years: int = 5) -> List[Tuple[datetime, float]]:
+    """
+    Genera histórico sintético diario para un bono con tasa de cupón fija.
+    """
+    from datetime import timedelta
+    end_date = datetime.now()
+    total_days = years * 365
+    start_date = end_date - timedelta(days=total_days)
+    
+    daily_rate = (coupon_rate / 100.0) / 365.0
+    out: List[Tuple[datetime, float]] = []
+    
+    initial_price = base_price / ((1.0 + daily_rate) ** total_days)
+    
+    for day_i in range(total_days + 1):
+        dt = start_date + timedelta(days=day_i)
+        curr = initial_price * ((1.0 + daily_rate) ** day_i)
+        out.append((dt, round(curr, 6)))
+        
+    return out
+
+
 
 def fetch_coingecko_prices(ids: Dict[str, str]) -> Dict[str, float]:
     """

@@ -132,6 +132,9 @@ function getBadgeHtml(item, indexaConnected) {
     if (item.indexa_api) {
         return `<span class="badge badge-live">${indexaConnected ? 'LIVE' : 'OFFLINE'}</span>`;
     }
+    if (item.cat === 'Renta Fija' || item.coupon_rate) {
+        return `<span class="badge badge-bono badge-editable" data-id="${item.id}">BONO</span>`;
+    }
     if (item.manual) {
         return `<span class="badge badge-manual badge-editable" data-id="${item.id}">EDIT</span>`;
     }

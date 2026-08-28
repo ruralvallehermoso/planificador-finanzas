@@ -40,11 +40,25 @@ connect_args = {}
 if "sqlite" in DATABASE_URL:
     connect_args = {"check_same_thread": False}
 
+from sqlalchemy import text
+
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
     pool_pre_ping=True,  # Test connections before using them
 )
+
+# Auto-migrate missing columns for SQLite
+try:
+    with engine.connect() as conn:
+        res = conn.execute(text("PRAGMA table_info(assets)")).fetchall()
+        col_names = [r[1] for r in res]
+        if col_names and "coupon_rate" not in col_names:
+            print("🔄 Migrating SQLite schema: Adding coupon_rate column to assets table...")
+            conn.execute(text("ALTER TABLE assets ADD COLUMN coupon_rate FLOAT"))
+            conn.commit()
+except Exception:
+    pass
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

@@ -208,6 +208,8 @@
                     class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">ACCIONES</button>
                 <button onclick="setFilter('Fondos')" id="btn-Fondos"
                     class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">FONDOS</button>
+                <button onclick="setFilter('Renta Fija')" id="btn-Renta Fija"
+                    class="filter-btn px-6 py-1.5 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">RENTA FIJA</button>
             </div>
 
             <div class="flex items-center gap-3">
@@ -367,6 +369,7 @@
             { id: 'myinv', name: 'Fondo MyInvestor', ticker: 'MYINV', cat: 'Fondos', plat: 'MyInv', qty: 2009, price: 0, yahoo: '0P0001CLDK.F', img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://myinvestor.es&size=64' },
             { id: 'gold', name: 'Oro / Gold', ticker: 'XAU', cat: 'Fondos', plat: 'MyInv', qty: 80, price: 0, yahoo: 'EGLN.L', currency: 'USD', img: 'https://img.icons8.com/color/96/gold-bars.png' },
             { id: 'ing', name: 'Liquidez ING', ticker: 'EUR', cat: 'Cash', plat: 'ING', qty: 1, price: 15000, manual: true, img: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON\u0026fallback_opts=TYPE,SIZE,URL\u0026url=http://ing.es\u0026size=64' },
+            { id: 'bono_es_10y', name: 'Bonos Estado Español 10A', ticker: 'ES10Y', cat: 'Renta Fija', plat: 'Tesoro / ING', qty: 30000, price: 1.0, coupon_rate: 3.7, yahoo: '10YESP.BD', img: 'https://flagcdn.com/w80/es.png' },
         ];
 
         // Configuración del Proxy de Indexa
@@ -711,10 +714,10 @@
             ];
 
             if (mode === 'All') {
-                const groups = { 'Acciones': 0, 'Cripto': 0, 'Fondos': 0, 'Cash': 0 };
+                const groups = { 'Acciones': 0, 'Cripto': 0, 'Fondos': 0, 'Renta Fija': 0, 'Cash': 0 };
                 db.forEach(i => { if (groups[i.cat] !== undefined) groups[i.cat] += i.price * i.qty; });
                 labels = Object.keys(groups); points = Object.values(groups);
-                colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899'];
+                colors = ['#6366f1', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899'];
             } else {
                 const sorted = [...data].sort((a, b) => (b.price * b.qty) - (a.price * a.qty));
                 const top = sorted.slice(0, 10);
@@ -777,6 +780,7 @@
             if (f === 'Cripto') color = "bg-purple-600 text-white shadow-lg shadow-purple-500/30";
             if (f === 'Acciones') color = "bg-blue-600 text-white shadow-lg shadow-blue-500/30";
             if (f === 'Fondos') color = "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30";
+            if (f === 'Renta Fija') color = "bg-sky-500 text-white shadow-lg shadow-sky-500/30";
             active.className = `filter-btn px-6 py-1.5 rounded-full text-xs font-bold transform scale-105 active ${color}`;
             render();
         }

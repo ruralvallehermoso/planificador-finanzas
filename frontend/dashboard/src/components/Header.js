@@ -8,8 +8,8 @@ import { toggleTheme, updateThemeIcons } from '../utils/theme.js';
 import { renderSparkline } from './SparklineChart.js';
 import { fetchPortfolioHistory, fetchPortfolioPerformance } from '../services/history.js';
 
-const FILTERS = ['All', 'Cripto', 'Acciones', 'Fondos'];
-const FILTER_LABELS = { 'All': 'TODO', 'Cripto': 'CRIPTO', 'Acciones': 'ACCIONES', 'Fondos': 'FONDOS' };
+const FILTERS = ['All', 'Cripto', 'Acciones', 'Fondos', 'Renta Fija'];
+const FILTER_LABELS = { 'All': 'TODO', 'Cripto': 'CRIPTO', 'Acciones': 'ACCIONES', 'Fondos': 'FONDOS', 'Renta Fija': 'RENTA FIJA' };
 
 /**
  * Create header HTML
@@ -26,7 +26,7 @@ export function createHeader() {
                     </svg>
                 </div>
                 <div class="logo-text">
-                    <h1>Master Portfolio <span style="font-size: 9px; font-weight: normal; color: #94a3b8;">v2.1</span></h1>
+                    <h1>Master Portfolio <span style="font-size: 9px; font-weight: normal; color: #94a3b8;">v2.2</span></h1>
 
                 </div>
             </div>
@@ -40,6 +40,12 @@ export function createHeader() {
             </div>
 
             <div class="header-right">
+                <button class="icon-btn" id="add-asset-btn" title="Añadir Activo">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </button>
+
                 <button class="icon-btn" id="theme-toggle" title="Cambiar Tema">
                     <svg id="theme-toggle-dark-icon" class="hidden" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
@@ -78,7 +84,13 @@ export function createHeader() {
 /**
  * Setup header event listeners
  */
-export function setupHeaderListeners(onRefresh, onFilterChange) {
+export function setupHeaderListeners(onRefresh, onFilterChange, onAddAsset) {
+    // Add asset button
+    const addAssetBtn = document.getElementById('add-asset-btn');
+    if (addAssetBtn && onAddAsset) {
+        addAssetBtn.addEventListener('click', onAddAsset);
+    }
+
     // Theme toggle
     const themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) {
@@ -138,13 +150,14 @@ function updateFilterButtons(activeFilter) {
     const buttons = document.querySelectorAll('.filter-btn');
     buttons.forEach(btn => {
         const filter = btn.dataset.filter;
-        btn.classList.remove('active', 'filter-cripto', 'filter-acciones', 'filter-fondos');
+        btn.classList.remove('active', 'filter-cripto', 'filter-acciones', 'filter-fondos', 'filter-renta-fija');
 
         if (filter === activeFilter) {
             btn.classList.add('active');
             if (filter === 'Cripto') btn.classList.add('filter-cripto');
             if (filter === 'Acciones') btn.classList.add('filter-acciones');
             if (filter === 'Fondos') btn.classList.add('filter-fondos');
+            if (filter === 'Renta Fija') btn.classList.add('filter-renta-fija');
         }
     });
 }

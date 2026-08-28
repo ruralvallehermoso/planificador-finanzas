@@ -27,8 +27,22 @@ def create_assets(db: Session, assets: Iterable[schemas.AssetCreate]) -> None:
 
 def create_asset_direct(db: Session, asset: schemas.AssetCreate) -> models.Asset:
     db_asset = models.Asset(**asset.model_dump())
-    db.add(db_asset)
-    return db_asset
+    merged_asset = db.merge(db_asset)
+    db.commit()
+    db.refresh(merged_asset)
+    return merged_asset
+
+
+def delete_asset(db: Session, asset_id: str) -> bool:
+    db_asset = get_asset(db, asset_id)
+    if not db_asset:
+        return False
+    # Also delete associated historical prices and snapshots
+    db.query(models.HistoricalPrice).filter(models.HistoricalPrice.asset_id == asset_id).delete()
+    db.query(models.PortfolioSnapshot).filter(models.PortfolioSnapshot.asset_id == asset_id).delete()
+    db.delete(db_asset)
+    db.commit()
+    return True
 
 
 def update_asset(db: Session, asset_id: str, data: schemas.AssetUpdate) -> Optional[models.Asset]:
