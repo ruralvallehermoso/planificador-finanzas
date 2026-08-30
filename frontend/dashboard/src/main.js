@@ -510,14 +510,12 @@ async function updateIndexa() {
             populateAssetSelector(getAssets(), category);
         }
     } else {
-
+        // No se sobreescribe el placeholder idx_1 (nombre/precio) con el error: eso
+        // ponía el precio a 0 y perdía el último valor conocido (~187.000€) del total
+        // de Fondos, además de mostrar el mensaje de excepción como si fuera el nombre
+        // del activo. El badge OFFLINE ya comunica que el dato no está actualizado.
+        console.warn('Indexa no disponible:', result.error);
         setIndexaConnected(false);
-
-        // Update placeholder with error
-        updateAsset('idx_1', {
-            name: `Indexa (${result.error})`,
-            price: 0
-        });
     }
 }
 
