@@ -41,7 +41,13 @@ export async function loadAssetsFromAPI() {
             indexa_api: a.indexa_api || false,
             manual: a.manual || false,
             coupon_rate: a.coupon_rate || null,
-            img: a.image_url || 'https://via.placeholder.com/64',
+            // Las cuentas Indexa no guardan image_url en la BD: el icono correcto solo se
+            // asigna cuando updateIndexa() consigue refrescar en vivo desde la API de Indexa.
+            // Si esa llamada falla (token caducado, etc.), sin este fallback se quedan con el
+            // icono genérico gris aunque sepamos que son cuentas Indexa (indexa_api=true).
+            img: a.image_url || (a.indexa_api
+                ? 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64'
+                : 'https://via.placeholder.com/64'),
             change24h: a.change_24h_pct || 0.0
         }));
 
