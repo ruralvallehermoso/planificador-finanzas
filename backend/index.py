@@ -28,7 +28,23 @@ async def lifespan(app: FastAPI):
         # 1. Initialize DB
         Base.metadata.create_all(bind=engine)
         print("✅ Database tables created/verified")
-        
+
+        # 1b. Migración ligera: create_all() solo crea tablas nuevas, nunca añade
+        # columnas a tablas que ya existen. coupon_rate se añadió al modelo Asset
+        # para Renta Fija pero nunca se aplicó a la tabla real, dejando cualquier
+        # consulta a /api/assets rota con "column assets.coupon_rate does not exist".
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(engine)
+            if "assets" in inspector.get_table_names():
+                existing_cols = {c["name"] for c in inspector.get_columns("assets")}
+                if "coupon_rate" not in existing_cols:
+                    with engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE assets ADD COLUMN coupon_rate FLOAT"))
+                    print("✅ Migrado: añadida columna assets.coupon_rate")
+        except Exception as e:
+            print(f"⚠️ Error en migración ligera de esquema: {e}")
+
         # 2. Sync Seed Data (Force Update Manual Assets)
         db = SessionLocal()
         try:
