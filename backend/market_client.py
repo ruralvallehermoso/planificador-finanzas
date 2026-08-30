@@ -74,12 +74,24 @@ def fetch_yahoo_prices(symbols: Dict[str, str], usd_to_eur: float | None = None)
 
 def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict[str, float]:
     """
-    Calcula o consulta el precio/rendimiento de activos de Renta Fija (Bonos).
-    - Si tiene yahoo_symbol, intenta consultar Yahoo Finance.
-    - Si la cotización de Yahoo es un precio estándar (> 5 EUR/USD), se normaliza y usa.
-    - Si la cotización de Yahoo es una TIR/Yield (< 15%), o si no hay conexión o es un bono a vencimiento:
-      aplica el devengo diario según el cupón anual (coupon_rate, ej: 3.7%).
+    Calcula el precio de activos de Renta Fija (Bonos).
+
+    - Si el yahoo_symbol resuelve a una cotización de mercado real (precio > 5,
+      típico de un ETF/fondo de renta fija cotizado — la deuda soberana individual
+      no tiene tickers públicos gratuitos en Yahoo Finance), se usa ese precio tal
+      cual: el valor es tan dinámico como lo sea ese instrumento. Al ser un precio
+      de mercado real, ya incorpora en su cotización cualquier efecto del cupón, así
+      que no se le suma devengo aparte.
+    - Si no hay ticker, o Yahoo no lo reconoce, se valora a la par (1.0) más el
+      interés simple devengado desde bond_start_date:
+      1.0 + cupón_anual% * (días transcurridos / 365).
+      Crece linealmente cada año que pasa (interés simple, no compuesto) reflejando
+      lo que supondría ir cobrando el cupón, sin recalcularse desde el precio actual
+      en cada llamada (lo que antes componía varias veces al día si el endpoint se
+      invocaba con frecuencia) ni crecer sin límite.
     """
+    from datetime import date as date_type
+
     prices: Dict[str, float] = {}
     for bond in bonds:
         asset_id = getattr(bond, "id", None) or (bond.get("id") if isinstance(bond, dict) else None)
@@ -87,9 +99,9 @@ def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict
             continue
         symbol = getattr(bond, "yahoo_symbol", None) or (bond.get("yahoo_symbol") if isinstance(bond, dict) else None)
         coupon = getattr(bond, "coupon_rate", None) or (bond.get("coupon_rate") if isinstance(bond, dict) else None)
-        current_price = getattr(bond, "price_eur", 1.0) or (bond.get("price_eur", 1.0) if isinstance(bond, dict) else 1.0) or 1.0
-        
-        fetched = False
+        start_date = getattr(bond, "bond_start_date", None) or (bond.get("bond_start_date") if isinstance(bond, dict) else None)
+
+        market_price = None
         if symbol:
             try:
                 url = YAHOO_CHART_URL.format(symbol=symbol)
@@ -100,37 +112,23 @@ def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict
                     if chart_result and "meta" in chart_result[0]:
                         raw_price = float(chart_result[0]["meta"].get("regularMarketPrice", 0.0))
                         currency = chart_result[0]["meta"].get("currency", "EUR")
-                        
-                        # Si es un precio de ETF o bono en cotización directa (> 5), solo se usa
-                        # tal cual cuando el activo ya está en esa misma escala (current_price > 10);
-                        # si no, un bono creado a mano en escala ~1.0 se inflaría al tomar un precio
-                        # de otra escala como si fuera el precio por unidad.
-                        if raw_price > 5.0 and current_price > 10.0:
+                        if raw_price > 5.0:
                             if currency == "USD" and usd_to_eur:
                                 raw_price *= usd_to_eur
-                            prices[asset_id] = raw_price
-                            fetched = True
-                        elif raw_price > 0 and raw_price <= 15.0:
-                            # Es una TIR/Yield (ej: 3.25% para un bono del estado a 10 años)
-                            if coupon and coupon > 0:
-                                duration = 8.5  # Duración modificada típica para 10A
-                                yield_diff = (coupon - raw_price) / 100.0
-                                adjusted_factor = max(0.8, 1.0 + duration * yield_diff)
-                                base = 1.0 if current_price <= 10.0 else 100.0
-                                prices[asset_id] = round(base * adjusted_factor, 4)
-                                fetched = True
+                            market_price = raw_price
             except Exception as e:
                 print(f"⚠️ Error fetching bond price from Yahoo for {asset_id} ({symbol}): {e}")
 
-        # Fallback / Devengo por cupón si no se obtuvo precio de mercado
-        if not fetched:
-            if coupon and coupon > 0:
-                daily_growth = (coupon / 100.0) / 365.0
-                new_price = current_price * (1.0 + daily_growth)
-                prices[asset_id] = round(new_price, 6)
-            else:
-                prices[asset_id] = current_price
-                
+        if market_price is not None:
+            prices[asset_id] = market_price
+        elif coupon and coupon > 0:
+            reference = start_date or date_type.today()
+            days_elapsed = max(0, (date_type.today() - reference).days)
+            accrued_fraction = (coupon / 100.0) * (days_elapsed / 365.0)
+            prices[asset_id] = round(1.0 + accrued_fraction, 6)
+        # Sin ticker de mercado real y sin cupón: no hay nada que actualizar aquí,
+        # se deja el precio como está (no se incluye en el dict de precios nuevos).
+
     return prices
 
 

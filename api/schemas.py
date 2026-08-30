@@ -19,6 +19,7 @@ class AssetBase(BaseModel):
     indexa_api: bool = False
     manual: bool = False
     coupon_rate: Optional[float] = None
+    bond_start_date: Optional[date] = None
     image_url: Optional[str] = None
 
 
@@ -39,6 +40,7 @@ class AssetUpdate(BaseModel):
     coincap_id: Optional[str] = None
     manual: Optional[bool] = None
     coupon_rate: Optional[float] = None
+    bond_start_date: Optional[date] = None
     image_url: Optional[str] = None
 
 

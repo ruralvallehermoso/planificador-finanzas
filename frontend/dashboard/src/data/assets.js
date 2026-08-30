@@ -41,6 +41,7 @@ export async function loadAssetsFromAPI() {
             indexa_api: a.indexa_api || false,
             manual: a.manual || false,
             coupon_rate: a.coupon_rate || null,
+            bond_start_date: a.bond_start_date || null,
             // Las cuentas Indexa no guardan image_url en la BD: el icono correcto solo se
             // asigna cuando updateIndexa() consigue refrescar en vivo desde la API de Indexa.
             // Si esa llamada falla (token caducado, etc.), sin este fallback se quedan con el
@@ -206,6 +207,7 @@ export async function createAssetAPI(assetData) {
             indexa_api: false,
             manual: assetData.manual !== undefined ? assetData.manual : (assetData.cat === 'Cash' || !assetData.yahoo),
             coupon_rate: assetData.coupon_rate ? parseFloat(assetData.coupon_rate) : null,
+            bond_start_date: assetData.bond_start_date || null,
             image_url: assetData.img || assetData.image_url || null
         };
 
@@ -232,6 +234,7 @@ export async function createAssetAPI(assetData) {
                 indexa_api: created.indexa_api || false,
                 manual: created.manual || false,
                 coupon_rate: created.coupon_rate || null,
+                bond_start_date: created.bond_start_date || null,
                 img: created.image_url || 'https://via.placeholder.com/64',
                 change24h: 0.0
             });

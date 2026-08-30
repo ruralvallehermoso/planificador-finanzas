@@ -43,12 +43,21 @@ export function createModal() {
                 </div>
 
                 <div id="bond-fields">
-                    <label class="input-label">Rentabilidad / Cupón Anual (%)</label>
-                    <input type="number" step="0.01" id="asset-coupon" class="modal-input" placeholder="ej: 3.7">
+                    <div class="modal-row">
+                        <div>
+                            <label class="input-label">Rentabilidad / Cupón Anual (%)</label>
+                            <input type="number" step="0.01" id="asset-coupon" class="modal-input" placeholder="ej: 3.7">
+                        </div>
+                        <div>
+                            <label class="input-label">Fecha de compra</label>
+                            <input type="date" id="asset-bond-date" class="modal-input">
+                        </div>
+                    </div>
+                    <small>El cupón se devenga desde esta fecha (interés simple, sin componer). Si se deja vacío, se usa hoy.</small>
                 </div>
 
-                <label class="input-label">Símbolo Yahoo Finance (opcional)</label>
-                <input type="text" id="asset-yahoo" class="modal-input" placeholder="ej: 10YESP.BD, ES10Y.BD, SPA.MC">
+                <label class="input-label">Símbolo Yahoo Finance (opcional, solo ETFs/fondos cotizados)</label>
+                <input type="text" id="asset-yahoo" class="modal-input" placeholder="ej: IBGS.MI (deuda soberana individual no tiene ticker público)">
             </div>
 
             <div class="modal-row">
@@ -135,6 +144,7 @@ export function openAddAssetModal() {
     const tickerInput = document.getElementById('asset-ticker');
     const platInput = document.getElementById('asset-plat');
     const couponInput = document.getElementById('asset-coupon');
+    const bondDateInput = document.getElementById('asset-bond-date');
     const yahooInput = document.getElementById('asset-yahoo');
     const qtyInput = document.getElementById('manual-qty');
     const priceInput = document.getElementById('manual-price');
@@ -155,6 +165,7 @@ export function openAddAssetModal() {
     if (tickerInput) tickerInput.value = '';
     if (platInput) platInput.value = '';
     if (couponInput) couponInput.value = '';
+    if (bondDateInput) bondDateInput.value = '';
     if (yahooInput) yahooInput.value = '';
     if (qtyInput) qtyInput.value = '';
     if (priceInput) priceInput.value = '';
@@ -242,6 +253,7 @@ async function saveChanges() {
         const ticker = document.getElementById('asset-ticker')?.value || '';
         const plat = document.getElementById('asset-plat')?.value || '';
         const coupon = parseFloat(document.getElementById('asset-coupon')?.value || 0);
+        const bondStartDate = document.getElementById('asset-bond-date')?.value || null;
         const yahoo = document.getElementById('asset-yahoo')?.value || null;
 
         await createAssetAPI({
@@ -252,6 +264,7 @@ async function saveChanges() {
             qty,
             price: price > 0 ? price : 1.0,
             coupon_rate: coupon > 0 ? coupon : null,
+            bond_start_date: bondStartDate || null,
             yahoo: yahoo ? yahoo.trim() : null
         });
     } else {

@@ -65,46 +65,19 @@ export async function fetchStockPrice(ticker) {
 export async function fetchStockPrices(assets, usdToEur) {
     const results = {};
 
+    // Los bonos de Renta Fija no se recalculan aquí: el backend (market_client.py,
+    // llamado vía /api/update_markets en cada carga) ya calcula su precio de forma
+    // consistente — precio de mercado real si el ticker resuelve a una cotización, o
+    // valor a la par + interés simple devengado desde el alta si no. Tener esa misma
+    // lógica duplicada en el cliente hacía que ambos cálculos pudieran divergir entre
+    // sí, y el valor mostrado dependiera de cuál terminara último.
     const promises = assets.map(async (asset) => {
-        if (!asset.yahoo) {
-            if (asset.coupon_rate && asset.coupon_rate > 0) {
-                const dailyRate = (asset.coupon_rate / 100) / 365;
-                results[asset.id] = (asset.price || 1.0) * (1 + dailyRate);
-            }
-            return;
-        }
+        const isBond = asset.cat === 'Renta Fija' || (asset.coupon_rate && asset.coupon_rate > 0);
+        if (isBond || !asset.yahoo) return;
 
         const price = await fetchStockPrice(asset.yahoo);
-        const isBond = asset.cat === 'Renta Fija' || (asset.coupon_rate && asset.coupon_rate > 0);
-
         if (price !== null) {
-            if (isBond) {
-                // Los bonos manuales usan una unidad sintética (~1.0/unidad), no el precio
-                // absoluto que devuelve Yahoo para el ticker. Solo se reinterpreta como
-                // TIR/Yield cuando hay cupón para poder ajustarla según la duración;
-                // si no hay cupón, no hay forma segura de interpretar ese número y se
-                // mantiene el precio actual (nunca se multiplica la cantidad por un valor
-                // ajeno a la escala de este activo, que fue lo que infló el total al añadir
-                // un bono con símbolo Yahoo pero sin cupón).
-                if (price > 0 && price <= 15.0 && asset.coupon_rate) {
-                    const duration = 8.5;
-                    const yieldDiff = (asset.coupon_rate - price) / 100;
-                    const adjustedFactor = Math.max(0.8, 1.0 + duration * yieldDiff);
-                    const base = (asset.price <= 10.0) ? 1.0 : 100.0;
-                    results[asset.id] = Number((base * adjustedFactor).toFixed(4));
-                } else if (asset.coupon_rate && asset.coupon_rate > 0) {
-                    const dailyRate = (asset.coupon_rate / 100) / 365;
-                    results[asset.id] = (asset.price || 1.0) * (1 + dailyRate);
-                }
-                // Sin cupón y sin una TIR interpretable: no se toca el precio.
-            } else if (price > 5.0) {
-                results[asset.id] = asset.currency === 'USD' ? price * usdToEur : price;
-            } else {
-                results[asset.id] = asset.currency === 'USD' ? price * usdToEur : price;
-            }
-        } else if (asset.coupon_rate && asset.coupon_rate > 0) {
-            const dailyRate = (asset.coupon_rate / 100) / 365;
-            results[asset.id] = (asset.price || 1.0) * (1 + dailyRate);
+            results[asset.id] = asset.currency === 'USD' ? price * usdToEur : price;
         }
     });
 

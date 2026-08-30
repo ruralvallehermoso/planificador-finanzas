@@ -26,7 +26,14 @@ def create_assets(db: Session, assets: Iterable[schemas.AssetCreate]) -> None:
 
 
 def create_asset_direct(db: Session, asset: schemas.AssetCreate) -> models.Asset:
-    db_asset = models.Asset(**asset.model_dump())
+    data = asset.model_dump()
+    # El devengo del cupón (ver models.Asset.bond_start_date) necesita una fecha de
+    # referencia; si es un bono y no se especificó una, se asume que empieza a devengar
+    # desde hoy.
+    if data.get("bond_start_date") is None and (data.get("category") == "Renta Fija" or data.get("coupon_rate")):
+        from datetime import date as date_type
+        data["bond_start_date"] = date_type.today()
+    db_asset = models.Asset(**data)
     merged_asset = db.merge(db_asset)
     db.commit()
     db.refresh(merged_asset)

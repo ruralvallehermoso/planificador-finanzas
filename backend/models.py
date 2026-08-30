@@ -26,6 +26,12 @@ class Asset(Base):
     indexa_api = Column(Boolean, default=False)
     manual = Column(Boolean, default=False)
     coupon_rate = Column(Float, nullable=True)  # % de rentabilidad/cupón anual para Renta Fija (ej: 3.7)
+    # Fecha desde la que se devenga el cupón (normalmente, cuando se dio de alta el bono).
+    # Sin ticker de mercado real, el "precio" de un bono se calcula como
+    # 1.0 + cupón_anual% * (días transcurridos desde esta fecha / 365) — interés simple,
+    # no compuesto, que crece linealmente cada año en vez de recalcularse en cada
+    # actualización de mercado (lo que antes componía varias veces al día).
+    bond_start_date = Column(Date, nullable=True)
 
     # Extras UI
     image_url = Column(String, nullable=True)

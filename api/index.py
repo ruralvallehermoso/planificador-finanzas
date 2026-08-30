@@ -42,6 +42,10 @@ async def lifespan(app: FastAPI):
                     with engine.begin() as conn:
                         conn.execute(text("ALTER TABLE assets ADD COLUMN coupon_rate FLOAT"))
                     print("✅ Migrado: añadida columna assets.coupon_rate")
+                if "bond_start_date" not in existing_cols:
+                    with engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE assets ADD COLUMN bond_start_date DATE"))
+                    print("✅ Migrado: añadida columna assets.bond_start_date")
         except Exception as e:
             print(f"⚠️ Error en migración ligera de esquema: {e}")
 
