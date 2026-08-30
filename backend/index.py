@@ -435,8 +435,8 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
                 
             weight = 1.0
             is_indexa_sub = False
-            
-            if a.category == "Indexa Capital":
+
+            if a.category == "Indexa Capital" or a.indexa_api:
                 is_indexa_sub = True
                 raw_id = a.id.replace("idx_", "")
                 weight = SIM_WEIGHTS.get(raw_id, 1.0) # Carmelo 1.0, Margarita 0.44
@@ -546,8 +546,8 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
         
         for a in all_assets:
              if a.id not in sim_asset_ids: continue
-             
-             if a.category == "Indexa Capital":
+
+             if a.category == "Indexa Capital" or a.indexa_api:
                  # Check weight
                  rid = a.id.replace("idx_", "")
                  w = SIM_WEIGHTS.get(rid, 1.0)
@@ -585,7 +585,7 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
              else:
                  val_live = a.price_eur * a.quantity
 
-             if a.category == "Indexa Capital":
+             if a.category == "Indexa Capital" or a.indexa_api:
                  indexa_assets_all.append(a.id)
                  real_indexa_total_current_sum += val_live
                  
