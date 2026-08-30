@@ -45,49 +45,21 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"⚠️ Error en migración ligera de esquema: {e}")
 
-        # 2. Sync Seed Data (Force Update Manual Assets)
+        # 2. Seed inicial: SOLO si la tabla está completamente vacía (primer arranque
+        # con una BD nueva). Antes esto se ejecutaba en cada cold start y volvía a
+        # crear cualquier activo que faltase (deshaciendo borrados) y, para "ing" y
+        # el resto de activos manuales, sobreescribía precio/cantidad al valor del
+        # seed aunque el usuario los hubiera editado a mano en la BD — incluía incluso
+        # un "FORCE UPDATE ING to 15000 unconditionally" explícito. Los datos deben
+        # venir de la BD tal cual están, no reconciliarse contra el seed en cada arranque.
         db = SessionLocal()
         try:
-            initial = seed_data.get_initial_assets()
-            current = {a.id: a for a in crud.get_assets(db)}
-            
-            for asset_data in initial:
-                # Update logic: If asset exists, check if we need to force update (Manual assets like ING)
-                if asset_data.id in current:
-                    existing = current[asset_data.id]
-                    
-                    # Generic Metadata Sync (ensure currency/config matches seed)
-                    if existing.currency != asset_data.currency:
-                         print(f"🔄 Updating Metadata (Currency) for {asset_data.id}: {existing.currency} -> {asset_data.currency}")
-                         existing.currency = asset_data.currency
-                         db.commit()
-                    if getattr(existing, 'coupon_rate', None) != asset_data.coupon_rate:
-                         existing.coupon_rate = asset_data.coupon_rate
-                         db.commit()
-
-                    # FORCE UPDATE ING to 15000 unconditionally
-                    if asset_data.id == "ing":
-                         print(f"🔥 FORCE UPDATING ING: {existing.price_eur} -> {asset_data.price_eur}")
-                         existing.price_eur = asset_data.price_eur
-                         existing.quantity = asset_data.quantity
-                         db.commit()
-                         
-                    # Specific check for other manual assets
-                    elif asset_data.manual:
-                         if existing.price_eur != asset_data.price_eur or existing.quantity != asset_data.quantity:
-                             print(f"🔄 Updating Manual Asset {asset_data.id}: {existing.price_eur} -> {asset_data.price_eur}")
-                             existing.price_eur = asset_data.price_eur
-                             existing.quantity = asset_data.quantity
-                             db.commit()
-                else:
-                    # Create if missing
-                    print(f"🌱 Adding missing asset: {asset_data.id}")
+            if not crud.get_assets(db):
+                print("🌱 Base de datos vacía: cargando activos iniciales")
+                for asset_data in seed_data.get_initial_assets():
                     crud.create_asset_direct(db, asset_data)
-            
-            # Commit any changes
-            db.commit()
-            print("✅ Seed data synced successfully")
-            
+                db.commit()
+                print("✅ Seed inicial cargado")
         except Exception as seed_err:
              print(f"⚠️ Seed sync warning: {seed_err}")
         finally:
