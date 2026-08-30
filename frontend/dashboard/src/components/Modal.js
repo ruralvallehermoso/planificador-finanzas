@@ -144,14 +144,20 @@ export function openAddAssetModal() {
     if (createFields) createFields.classList.remove('hidden');
     if (deleteBtn) deleteBtn.classList.add('hidden');
 
+    // Los ejemplos ("Bonos Estado Español 10A", "10YESP.BD", cupón 3.7...) viven en
+    // el atributo placeholder de cada input (ver createModal()); no se ponen aquí como
+    // valor real porque, si el usuario no los toca o no se da cuenta de que ya había
+    // algo escrito, se guardaban como si fueran datos suyos. En particular, un símbolo
+    // Yahoo real de ejemplo se enviaba sin querer, y al no tener cupón definido el precio
+    // se recalculaba con la cotización de ese ticker de ejemplo, disparando el valor total.
     if (catInput) catInput.value = 'Renta Fija';
-    if (nameInput) nameInput.value = 'Bonos Estado Español 10A';
-    if (tickerInput) tickerInput.value = 'ES10Y';
-    if (platInput) platInput.value = 'Tesoro / ING';
-    if (couponInput) couponInput.value = '3.7';
-    if (yahooInput) yahooInput.value = '10YESP.BD';
-    if (qtyInput) qtyInput.value = '30000';
-    if (priceInput) priceInput.value = '1.0';
+    if (nameInput) nameInput.value = '';
+    if (tickerInput) tickerInput.value = '';
+    if (platInput) platInput.value = '';
+    if (couponInput) couponInput.value = '';
+    if (yahooInput) yahooInput.value = '';
+    if (qtyInput) qtyInput.value = '';
+    if (priceInput) priceInput.value = '';
 
     const bondFields = document.getElementById('bond-fields');
     if (bondFields) bondFields.style.display = 'block';

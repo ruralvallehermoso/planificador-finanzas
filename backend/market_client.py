@@ -101,8 +101,11 @@ def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict
                         raw_price = float(chart_result[0]["meta"].get("regularMarketPrice", 0.0))
                         currency = chart_result[0]["meta"].get("currency", "EUR")
                         
-                        # Si es un precio de ETF o bono en cotización directa (> 5):
-                        if raw_price > 5.0:
+                        # Si es un precio de ETF o bono en cotización directa (> 5), solo se usa
+                        # tal cual cuando el activo ya está en esa misma escala (current_price > 10);
+                        # si no, un bono creado a mano en escala ~1.0 se inflaría al tomar un precio
+                        # de otra escala como si fuera el precio por unidad.
+                        if raw_price > 5.0 and current_price > 10.0:
                             if currency == "USD" and usd_to_eur:
                                 raw_price *= usd_to_eur
                             prices[asset_id] = raw_price
