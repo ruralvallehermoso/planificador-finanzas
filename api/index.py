@@ -116,6 +116,35 @@ def health_check():
         "indexa_token_format": token_format,
     }
 
+@app.get("/api/debug/indexa_auth")
+def debug_indexa_auth():
+    """Diagnóstico: prueba varias combinaciones de cabeceras contra Indexa y
+    devuelve SOLO el código de estado de cada una. Nunca devuelve el token ni
+    datos de las cuentas. Sirve para saber qué esquema de autenticación acepta
+    su API sin ir a ciegas."""
+    import market_client, requests
+    token = market_client._get_indexa_token()
+    if not token:
+        return {"error": "INDEXA_TOKEN ausente"}
+
+    url = f"{market_client.INDEXA_BASE_URL}/users/me"
+    ua = market_client.DEFAULT_HEADERS
+    variantes = {
+        "bearer": {"Authorization": f"Bearer {token}"},
+        "bearer + user-agent": {**ua, "Authorization": f"Bearer {token}"},
+        "x-auth-token": {"X-AUTH-TOKEN": token},
+        "x-auth-token + user-agent": {**ua, "X-AUTH-TOKEN": token},
+        "authorization sin prefijo": {"Authorization": token},
+    }
+    out = {}
+    for nombre, headers in variantes.items():
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            out[nombre] = r.status_code
+        except Exception as e:
+            out[nombre] = f"error: {type(e).__name__}"
+    return out
+
 @app.get("/api/assets", response_model=List[schemas.Asset])
 def list_assets(category: Optional[str] = None):
     try:
