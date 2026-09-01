@@ -371,11 +371,34 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
     """Compara el rendimiento de la cartera vs el coste de la hipoteca"""
     try:
         import market_client
-        # SIMULATOR CONFIG: Weights for specific Indexa accounts (Legacy Logic)
+        # SIMULATOR CONFIG: peso con el que cada cuenta Indexa entra en la comparación.
+        # El de Margarita está calibrado para que la cartera del 24-nov-2025 sume
+        # EXACTAMENTE los 127.000€ de hipoteca con los que se compara:
+        #   32.196,09 (Carmelo) + 150.209,77·w + 24.590,16 (MyInv) + 5.520,00 (Oro) = 127.000
         SIM_WEIGHTS = {
-            "76B4EQKT": 0.44,     # Margarita (44%)
-            "2RALDY9V": 0.0,      # Marcos (Excluded)
-            "23LLWQDX": 1.0       # Carmelo (Full)
+            "76B4EQKT": 0.430689,  # Margarita
+            "2RALDY9V": 0.0,       # Marcos (excluida)
+            "23LLWQDX": 1.0        # Carmelo (entera)
+        }
+
+        # Valor real de cada cuenta Indexa el 24-nov-2025, tomado del histórico en BD:
+        # no son estimaciones, son los puntos guardados de ese día.
+        INDEXA_VALOR_24NOV = {
+            "23LLWQDX": 32196.09,   # Carmelo
+            "76B4EQKT": 150209.77,  # Margarita
+        }
+
+        # Retiradas posteriores al 24-nov-2025, en valor BRUTO de la cuenta.
+        # Se devuelven al valor ACTUAL en vez de restarse del inicial: ese dinero salió
+        # de la cartera pero no es una pérdida, y así la base se mantiene en 127.000€.
+        # Detectadas en el histórico como caídas que no acompañan al mercado (se usó la
+        # otra cuenta Indexa como referencia del movimiento de ese día).
+        # AMPLIAR AQUÍ cuando se haga una retirada nueva.
+        INDEXA_RETIRADAS = {
+            "23LLWQDX": [("2025-12-04", 5034.92)],
+            "76B4EQKT": [("2026-01-17", 8900.65),
+                         ("2026-07-05", 12228.19),
+                         ("2026-07-18", 10313.03)],
         }
 
         # FILTER ASSETS
@@ -454,11 +477,12 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
                 
             weight = 1.0
             is_indexa_sub = False
+            raw_id = None
 
             if a.category == "Indexa Capital" or a.indexa_api:
                 is_indexa_sub = True
                 raw_id = a.id.replace("idx_", "")
-                weight = SIM_WEIGHTS.get(raw_id, 1.0) # Carmelo 1.0, Margarita 0.44
+                weight = SIM_WEIGHTS.get(raw_id, 1.0)
                 
             # --- PRICING LOGIC ---
             raw_current = a.price_eur * a.quantity
@@ -471,22 +495,21 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
                  if a.id in live_indexa_map:
                       raw_current = live_indexa_map[a.id]
 
-                 # HISTORICAL ESTIMATION (Ratio Method)
-                 # El coste inicial calibrado se aplica SIEMPRE para cuentas Indexa, no
-                 # solo cuando la conexión en vivo funciona: antes, con la API de Indexa
-                 # caída, estas cuentas caían a la rama estándar, que usa el precio
-                 # ACTUAL como precio inicial — dejando su ganancia clavada para siempre
-                 # en las constantes de retiradas (5.000€ / 12.612,86×peso) en vez de
-                 # moverse con el valor de la cuenta.
-                 # Override for Carmelo (23LLWQDX) to match user specific data: 32196 EUR on Nov 24.
-                 if "23LLWQDX" in a.id or weight == 1.0:
-                      raw_initial = 32196.0
-                 # Override for Margarita (76B4EQKT) to match user specific data: 66092 EUR (Weighted).
-                 # So Raw = 66092 / 0.44
-                 elif "76B4EQKT" in a.id:
-                      raw_initial = (150209 - 9531)
+                 # Las retiradas hechas después de la fecha de inicio vuelven al valor
+                 # actual: salieron de la cartera, pero no son una pérdida frente a la
+                 # hipoteca. Así el inicial se queda limpio en la base de 127.000€.
+                 raw_current += sum(imp for f, imp in INDEXA_RETIRADAS.get(raw_id, [])
+                                    if f >= str(req.start_date))
+
+                 # Valor inicial: el real del 24-nov-2025 para la comparación por defecto;
+                 # para cualquier otra fecha, el punto correspondiente del histórico.
+                 if req.start_date == date(2025, 11, 24) and raw_id in INDEXA_VALOR_24NOV:
+                      raw_initial = INDEXA_VALOR_24NOV[raw_id]
                  else:
-                      raw_initial = raw_current # Fallback if history missing
+                      hist = crud.get_history_for_asset(db, a.id, limit_days=365*5)
+                      punto = next((h for h in sorted(hist, key=lambda x: x.date)
+                                    if h.date >= req.start_date), None)
+                      raw_initial = punto.price_eur * a.quantity if punto else raw_current
             else:
                 # STANDARD ASSET LOGIC (MyInvestor, Gold)
                 # Forced Overrides for the Nov 25 basis to match user expectations
@@ -512,15 +535,7 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
 
             initial_val = raw_initial * weight
             current_val = raw_current * weight
-            
-            # Specific Adjustments (5000 withdrawal)
-            if "23LLWQDX" in a.name or "23LLWQDX" in a.id or (a.id == "idx_1" and "Indexa" in a.category):
-                 initial_val -= 5000.0
-                 
-            # Withdrawal from Margarita (12.612,86€ total withdrawal, adjusting weighted portion to fix profit)
-            if "76B4EQKT" in a.name or "76B4EQKT" in a.id:
-                 initial_val -= (12612.86 * weight)
-                 
+
             change_pct = ((current_val - initial_val) / initial_val * 100) if initial_val > 0 else 0.0
             
             display_name = a.name
