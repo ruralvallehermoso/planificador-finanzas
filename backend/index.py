@@ -376,7 +376,7 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
         # EXACTAMENTE los 127.000€ de hipoteca con los que se compara:
         #   32.196,09 (Carmelo) + 150.209,77·w + 24.590,16 (MyInv) + 5.520,00 (Oro) = 127.000
         SIM_WEIGHTS = {
-            "76B4EQKT": 0.430689,  # Margarita
+            "76B4EQKT": 0.43068936195,  # Margarita (decimales necesarios para cuadrar al céntimo)
             "2RALDY9V": 0.0,       # Marcos (excluida)
             "23LLWQDX": 1.0        # Carmelo (entera)
         }
