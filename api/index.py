@@ -95,7 +95,26 @@ def sanity():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "token_available": True}
+    """Estado del backend y diagnóstico de la credencial de Indexa.
+
+    Solo informa de si INDEXA_TOKEN está configurado y de su FORMATO, nunca de su
+    valor: los tokens OAuth2 actuales de Indexa son JWT (empiezan por "eyJ") y los
+    de la API antigua no, así que esto permite saber si la variable de entorno se
+    actualizó sin exponer la credencial.
+    """
+    import market_client
+    token = market_client._get_indexa_token()
+    if not token:
+        token_format = "ausente"
+    elif token.startswith("eyJ"):
+        token_format = "jwt (OAuth2, formato actual)"
+    else:
+        token_format = "no-jwt (formato antiguo)"
+    return {
+        "status": "ok",
+        "token_available": bool(token),
+        "indexa_token_format": token_format,
+    }
 
 @app.get("/api/assets", response_model=List[schemas.Asset])
 def list_assets(category: Optional[str] = None):
