@@ -440,6 +440,7 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
 
         # --- Desglose por activo ---
         asset_breakdown = []
+        start_prices_other = {}  # precio de arranque de los activos no-Indexa (ver serie diaria)
         simulated_basis_sum = 0.0
         simulated_current_sum = 0.0
         
@@ -528,6 +529,10 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
                      
 
                 raw_initial = start_price * a.quantity
+                # Se guarda para arrancar la serie diaria en esta misma base: MyInvestor
+                # y Oro no tienen histórico anterior a enero de 2026, así que sin esto la
+                # gráfica empezaría en un valor distinto al de la base de 127.000€.
+                start_prices_other[a.id] = start_price
 
             # APPLY WEIGHTS
             if weight == 0.0:
@@ -563,193 +568,105 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
         schedule = calculate_amortization_french(req.mortgage.principal, req.mortgage.annual_rate, req.mortgage.years)
         comparison = compare_mortgage_vs_portfolio(current_value, basis, req.tax_rate, schedule, req.start_date)
         
-        # --- CUSTOM WEIGHTED HISTORY RECONSTRUCTION (SCALED MASTER APPROACH) ---
-        # Problem: Individual sub-accounts (23LLWQDX...) might lack history in DB.
-        # Solution: Use idx_1 (Master) history as the shape, scaled to the Simulator's Indexa Total.
-        
-        # 1. Calculate Scale Factor for Indexa
-        # Sim Indexa Total (Weighted) / Real Indexa Total (Unweighted)
-        sim_indexa_current_sum = 0.0
-        real_indexa_current_sum = 0.0
-        
+        # --- RECONSTRUCCIÓN DE LA SERIE DIARIA DE LA CARTERA ---
+        # Se calcula cuenta a cuenta, con el mismo criterio que el desglose de arriba:
+        # cada cuenta Indexa entra con su peso y con sus retiradas devueltas desde el día
+        # en que se hicieron. Antes se sumaban las tres cuentas en una "curva maestra"
+        # escalada por un único factor, lo que ignoraba los pesos individuales (Marcos
+        # está excluida) y, sobre todo, las retiradas: la gráfica mostraba caídas en
+        # escalón el 04-dic, 17-ene, 05-jul y 18-jul y terminaba en pérdidas aunque la
+        # operación fuera en ganancias.
+
+        indexa_sim_ids = []
         other_assets_ids = []
-        
-        for a in all_assets:
-             if a.id not in sim_asset_ids: continue
-
-             if a.category == "Indexa Capital" or a.indexa_api:
-                 # Check weight
-                 rid = a.id.replace("idx_", "")
-                 w = SIM_WEIGHTS.get(rid, 1.0)
-                 
-                 # Real Value (Use live map if avail, else DB)
-                 r_val = 0.0
-                 if a.id in live_indexa_map:
-                     r_val = live_indexa_map[a.id]
-                 else:
-                     r_val = a.price_eur * a.quantity # Fallback
-                 
-                 real_indexa_current_sum += r_val
-                 sim_indexa_current_sum += (r_val * w)
-             else:
-                 other_assets_ids.append(a.id)
-
-        # --- CUSTOM WEIGHTED HISTORY RECONSTRUCTION (COMPOSITE MASTER APPROACH) ---
-        # Problem: 'idx_1' history might be incomplete or partial, causing chart artifacts.
-        # Solution: Fetch histories for ALL active Indexa assets in DB and sum them to create a robust Master Curve.
-        
-        # 1. Identify ALL Indexa Assets in DB (not just Simulator ones)
-        # We use 'all_assets' which is already fetched.
-        
         sim_indexa_current_sum = 0.0
         real_indexa_total_current_sum = 0.0
-        
-        # We need histories for ALL Indexa assets to build the Master Curve
-        indexa_assets_all = []
-        other_assets_ids = []
-        
+
         for a in all_assets:
-             val_live = 0.0
-             if a.id in live_indexa_map:
-                 val_live = live_indexa_map[a.id]
-             else:
-                 val_live = a.price_eur * a.quantity
+            val_live = live_indexa_map.get(a.id, a.price_eur * a.quantity)
+            if a.category == "Indexa Capital" or a.indexa_api:
+                real_indexa_total_current_sum += val_live
+                if a.id in sim_asset_ids:
+                    w = SIM_WEIGHTS.get(a.id.replace("idx_", ""), 1.0)
+                    if w > 0:
+                        indexa_sim_ids.append(a.id)
+                        sim_indexa_current_sum += val_live * w
+            elif a.id in sim_asset_ids:
+                other_assets_ids.append(a.id)
 
-             if a.category == "Indexa Capital" or a.indexa_api:
-                 indexa_assets_all.append(a.id)
-                 real_indexa_total_current_sum += val_live
-                 
-                 # Add to Sim Sum if included in Simulator
-                 if a.id in sim_asset_ids:
-                     rid = a.id.replace("idx_", "")
-                     w = SIM_WEIGHTS.get(rid, 1.0)
-                     sim_indexa_current_sum += (val_live * w)
-             elif a.id in sim_asset_ids:
-                 other_assets_ids.append(a.id)
+        indexa_scale_factor = 1.0  # ya no se usa: cada cuenta lleva su propio peso
 
-        indexa_scale_factor = 0.0
-        if real_indexa_total_current_sum > 0:
-            indexa_scale_factor = sim_indexa_current_sum / real_indexa_total_current_sum
-            
-        # 2. Fetch Histories for ALL Indexa Assets & Others
-        # This builds the "Composite Master Shape" with Forward Fill to avoid ragged edges
-        
-        # A. Fetch all raw histories first
-        indexa_hist_maps = {} # aid -> {date: price}
+        indexa_hist_maps = {}
         all_dates = set()
-        
-        for idx_id in indexa_assets_all:
-             h = crud.get_history_for_asset(db, idx_id, limit_days=365*5)
-             hm = {x.date: x.price_eur for x in h}
-             indexa_hist_maps[idx_id] = hm
-             all_dates.update(hm.keys())
+        for aid in indexa_sim_ids:
+            h = crud.get_history_for_asset(db, aid, limit_days=365*5)
+            indexa_hist_maps[aid] = {x.date: x.price_eur for x in h}
+            all_dates.update(indexa_hist_maps[aid].keys())
 
-        # B. Other Assets Hist (MyInv, Gold...)
         other_hist_maps = {}
         for oid in other_assets_ids:
-             h = crud.get_history_for_asset(db, oid, limit_days=365*5)
-             other_hist_maps[oid] = {x.date: x.price_eur for x in h}
-             all_dates.update(other_hist_maps[oid].keys())
-        
-        # Ensure TODAY is in the list
+            h = crud.get_history_for_asset(db, oid, limit_days=365*5)
+            other_hist_maps[oid] = {x.date: x.price_eur for x in h}
+            all_dates.update(other_hist_maps[oid].keys())
+
         all_dates.add(date.today())
-             
-        sorted_dates = sorted(list(all_dates))
-        sorted_dates = [d for d in sorted_dates if d >= req.start_date and d <= date.today()]
-        
-        # C. Build Composite Master with Forward Fill
-        composite_master_hist = {}
-        last_known_prices = {} # aid -> price
-        
-        # Initialize Other Assets Forward Fill dict OUTSIDE loop
-        last_known_prices_other = {}
-        # Pre-seed Other Assets
-        for oid in other_assets_ids:
-             # Try to find the closest past date for initial value (Backfill)
-             if other_hist_maps[oid]:
-                 # Find latest date <= start_date (or just the first date in map if all are future)
-                 # Actually, we can just grab the first available price key?
-                 # Better: sort keys.
-                 sorted_keys = sorted(other_hist_maps[oid].keys())
-                 if sorted_keys:
-                     last_known_prices_other[oid] = other_hist_maps[oid][sorted_keys[0]]
-        
-        for d in sorted_dates:
-            daily_sum = 0.0
-            is_weekend = d.weekday() >= 5
-            
-            for aid in indexa_assets_all:
-                price = indexa_hist_maps[aid].get(d)
-                
-                if is_weekend:
-                    price = None
-                    
-                if price is not None and price > 0:
-                    last_known_prices[aid] = price
-                
-                # Use last known price (Forward Fill)
-                daily_sum += last_known_prices.get(aid, 0.0)
-            
-            composite_master_hist[d] = daily_sum
+        sorted_dates = sorted(d for d in all_dates if req.start_date <= d <= date.today())
+
+        def retiradas_hasta(rid, d):
+            """Retiradas de esa cuenta hechas entre la fecha de inicio y el día d."""
+            return sum(imp for f, imp in INDEXA_RETIRADAS.get(rid, [])
+                       if str(req.start_date) <= f <= str(d))
 
         portfolio_history = []
         asset_qtys = {a.id: a.quantity for a in all_assets}
         debug_log = []
-        
+
+        last_known_idx = {}
+        last_known_prices_other = dict(start_prices_other)
+
         for d in sorted_dates:
-             daily_val = 0.0
-             idx_component = 0.0
-             other_component = 0.0
-             is_today = (d == date.today())
-             
-             # I. Indexa Component (Scaled Composite)
-             if is_today and sim_indexa_current_sum > 0:
-                 # Anchor to exact live value
-                 daily_val += sim_indexa_current_sum
-             else:
-                 master_val = composite_master_hist.get(d, 0.0)
-                 if master_val > 0:
-                      weighted_val = master_val * indexa_scale_factor
-                      
-                      daily_val += weighted_val
-                      idx_component = weighted_val
+            es_finde = d.weekday() >= 5
+            is_today = (d == date.today())
+            daily_val = 0.0
+            idx_component = 0.0
+            other_component = 0.0
 
-             
-             # II. Other Assets Component (Direct Sum) with Forward Fill
-             for oid in other_assets_ids:
-                  # WEEKEND PROTECTION: If Sat/Sun, force usage of last_known for Non-Crypto
-                  # helping to avoid 0.0 or bad data from APIs that don't trade on weekends.
-                  # Assuming 'gold' might be crypto or not, but 'ing'/'myinv' are definitely not.
-                  # We check if oid is in 'other_hist_maps' keys.
-                  # A simpler heuristic: If D is weekend, set price=None to force hold.
-                  # (Unless we really want crypto updates on weekends).
-                  is_weekend = d.weekday() >= 5
-                  
-                  price = other_hist_maps[oid].get(d)
-                  
-                  if is_weekend:
-                       # Only allow update if we are sure it's valid > 0
-                       # But for Funds, we PREFER to hold Friday value to avoid "Partial" updates or noise.
-                       # MyInvestor / Gold -> Force Hold.
-                       price = None 
+            # I. Cuentas Indexa: valor de la cuenta + retiradas ya hechas, por su peso
+            for aid in indexa_sim_ids:
+                rid = aid.replace("idx_", "")
+                w = SIM_WEIGHTS.get(rid, 1.0)
 
-                  # Strict check: Ignore None AND 0.0
-                  if price is not None and price > 0:
-                      last_known_prices_other[oid] = price
-                  
-                  val_price = last_known_prices_other.get(oid, 0.0)
-                  qty = asset_qtys.get(oid, 0.0)
-                  comp_val = val_price * qty
-                  daily_val += comp_val
-                  other_component += comp_val
-             
-             
-             debug_log.append(f"D:{d} V:{daily_val:.1f} Idx:{idx_component:.1f} Oth:{other_component:.1f}")
-             
-             if daily_val > 0:
-                 portfolio_history.append({"date": d, "value": daily_val})
+                # Sin filtro de fin de semana para Indexa: sus puntos de sábado/domingo
+                # son válidos (repiten el viernes) y, sobre todo, las tres retiradas de
+                # Margarita están registradas justo en sábado o domingo. Descartarlas
+                # arrastraba el valor del viernes (previo a la retirada) mientras se le
+                # sumaba la retirada, creando un pico artificial de un fin de semana.
+                precio = indexa_hist_maps[aid].get(d)
+                if precio is not None and precio > 0:
+                    last_known_idx[aid] = precio
 
-                 
+                bruto = live_indexa_map[aid] if (is_today and aid in live_indexa_map) \
+                        else last_known_idx.get(aid, 0.0)
+
+                if bruto > 0:
+                    valor = (bruto + retiradas_hasta(rid, d)) * w
+                    daily_val += valor
+                    idx_component += valor
+
+            # II. Resto de activos (MyInvestor, Oro) con forward fill
+            for oid in other_assets_ids:
+                precio = None if es_finde else other_hist_maps[oid].get(d)
+                if precio is not None and precio > 0:
+                    last_known_prices_other[oid] = precio
+                comp_val = last_known_prices_other.get(oid, 0.0) * asset_qtys.get(oid, 0.0)
+                daily_val += comp_val
+                other_component += comp_val
+
+            debug_log.append(f"D:{d} V:{daily_val:.1f} Idx:{idx_component:.1f} Oth:{other_component:.1f}")
+
+            if daily_val > 0:
+                portfolio_history.append({"date": d, "value": daily_val})
+
         daily_history = calculate_daily_comparison(
             portfolio_history, 
             basis, 
