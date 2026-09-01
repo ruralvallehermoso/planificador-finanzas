@@ -275,7 +275,11 @@ def _get_indexa_session() -> requests.Session:
 def _make_indexa_request(endpoint: str, session: requests.Session) -> dict:
     """Realiza una petición autenticada a la API de Indexa."""
     token = _get_indexa_token()
-    headers = {"X-AUTH-TOKEN": token}
+    # Indexa usa OAuth2: responde con 'WWW-Authenticate: Bearer' y descarta la
+    # cabecera X-AUTH-TOKEN que usaba su API antigua (mandarla da exactamente el
+    # mismo 401 que no mandar nada). Eso es lo que dejó las cuentas Indexa en
+    # OFFLINE con "401 Unauthorized" — no era un token caducado.
+    headers = {"Authorization": f"Bearer {token}"}
     url = f"{INDEXA_BASE_URL}{endpoint}"
     
     response = session.get(url, headers=headers, timeout=TIMEOUT_SECONDS)
