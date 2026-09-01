@@ -446,24 +446,28 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
             raw_initial = 0.0
             
             # VIRTUAL INDEXA OVERRIDE
-            if is_indexa_sub and a.id in live_indexa_map:
-                 real_account_val = live_indexa_map[a.id]
-                 raw_current = real_account_val # Quantity assumed 1 for these
-                 
+            if is_indexa_sub:
+                 # Valor actual: en vivo si la API de Indexa responde; si no, se queda
+                 # el último precio persistido en BD (raw_current ya calculado arriba).
+                 if a.id in live_indexa_map:
+                      raw_current = live_indexa_map[a.id]
+
                  # HISTORICAL ESTIMATION (Ratio Method)
-                 # Assumption: Account share of total Indexa was similar at start_date
+                 # El coste inicial calibrado se aplica SIEMPRE para cuentas Indexa, no
+                 # solo cuando la conexión en vivo funciona: antes, con la API de Indexa
+                 # caída, estas cuentas caían a la rama estándar, que usa el precio
+                 # ACTUAL como precio inicial — dejando su ganancia clavada para siempre
+                 # en las constantes de retiradas (5.000€ / 12.612,86×peso) en vez de
+                 # moverse con el valor de la cuenta.
                  # Override for Carmelo (23LLWQDX) to match user specific data: 32196 EUR on Nov 24.
-                 if "23LLWQDX" in a.id or (is_indexa_sub and weight == 1.0): 
+                 if "23LLWQDX" in a.id or weight == 1.0:
                       raw_initial = 32196.0
                  # Override for Margarita (76B4EQKT) to match user specific data: 66092 EUR (Weighted).
                  # So Raw = 66092 / 0.44
                  elif "76B4EQKT" in a.id:
                       raw_initial = (150209 - 9531)
-                 #elif total_indexa_live > 0 and idx_master_start_val > 0:
-                 #     ratio = real_account_val / total_indexa_live
-                 #     raw_initial = idx_master_start_val * ratio
-                 #else:
-                 #     raw_initial = raw_current # Fallback if history missing
+                 else:
+                      raw_initial = raw_current # Fallback if history missing
             else:
                 # STANDARD ASSET LOGIC (MyInvestor, Gold)
                 # Forced Overrides for the Nov 25 basis to match user expectations
@@ -482,14 +486,6 @@ def get_simulator_comparison(req: schemas.SimulatorRequest, db: Session = Depend
                      
 
                 raw_initial = start_price * a.quantity
-
-            # --- HOTFIX: Force Gold Price to align with MyInvestor (User Report) ---
-            if a.id == "gold" and raw_current < 6100:
-                 # User reported ~6146 EUR. 
-                 # 80 units * 76.83 = 6146.4
-                 raw_current = 6146.4
-                 # Update a.price_eur in memory for consistency if displayed elsewhere
-                 a.price_eur = 76.83
 
             # APPLY WEIGHTS
             if weight == 0.0:
