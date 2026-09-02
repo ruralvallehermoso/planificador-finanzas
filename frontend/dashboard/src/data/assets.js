@@ -5,6 +5,40 @@
 
 import { BACKEND_URL } from '../config.js';
 
+const INDEXA_ICON = 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64';
+
+// Icono de la deuda del Estado español. Vive en public/icons del propio bundle, así
+// que BASE_URL lo resuelve solo en los dos despliegues: '/' en el de Finanzas y
+// '/static/finanzas/' en el del Planificador.
+const TESORO_ES_ICON = `${import.meta.env.BASE_URL}icons/bono-tesoro-es.svg`;
+
+/**
+ * Deuda del Estado español: Bonos y Obligaciones (ES0000012...) y Letras del Tesoro
+ * (ES0L...). Se reconoce por el ISIN, que es el dato que identifica al emisor.
+ */
+function isSpanishTreasuryBond(isin) {
+    if (!isin) return false;
+    const code = String(isin).trim().toUpperCase();
+    return code.startsWith('ES00000') || code.startsWith('ES0L');
+}
+
+/**
+ * Icono de un activo. El de la deuda española no se guarda en la BD a propósito: al
+ * resolverse aquí vale igual para las líneas que ya existían y para las que se creen,
+ * y la ruta se ajusta sola a cada despliegue en vez de quedar congelada en un campo.
+ */
+function resolveAssetIcon(asset) {
+    if (asset.image_url) return asset.image_url;
+    // Las cuentas Indexa no guardan image_url en la BD: el icono correcto solo se
+    // asigna cuando updateIndexa() consigue refrescar en vivo desde la API de Indexa.
+    // Si esa llamada falla (token caducado, etc.), sin este fallback se quedan con el
+    // icono genérico gris aunque sepamos que son cuentas Indexa (indexa_api=true).
+    if (asset.indexa_api) return INDEXA_ICON;
+    if (isSpanishTreasuryBond(asset.isin)) return TESORO_ES_ICON;
+    return 'https://via.placeholder.com/64';
+}
+
+
 // Application state - assets loaded from API
 let state = {
     assets: [],
@@ -45,13 +79,7 @@ export async function loadAssetsFromAPI() {
             bond_start_date: a.bond_start_date || null,
             bond_maturity_date: a.bond_maturity_date || null,
             coupon_frequency: a.coupon_frequency || 1,
-            // Las cuentas Indexa no guardan image_url en la BD: el icono correcto solo se
-            // asigna cuando updateIndexa() consigue refrescar en vivo desde la API de Indexa.
-            // Si esa llamada falla (token caducado, etc.), sin este fallback se quedan con el
-            // icono genérico gris aunque sepamos que son cuentas Indexa (indexa_api=true).
-            img: a.image_url || (a.indexa_api
-                ? 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://indexacapital.com&size=64'
-                : 'https://via.placeholder.com/64'),
+            img: resolveAssetIcon(a),
             change24h: a.change_24h_pct || 0.0
         }));
 
@@ -246,7 +274,7 @@ export async function createAssetAPI(assetData) {
                 bond_start_date: created.bond_start_date || null,
                 bond_maturity_date: created.bond_maturity_date || null,
                 coupon_frequency: created.coupon_frequency || 1,
-                img: created.image_url || 'https://via.placeholder.com/64',
+                img: resolveAssetIcon(created),
                 change24h: 0.0
             });
             return created;

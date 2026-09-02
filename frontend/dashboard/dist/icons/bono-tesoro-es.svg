@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Deuda del Estado español">
+  <title>Deuda del Estado español</title>
+  <!-- Rojigualda recortada en círculo: el hueco del icono es redondo (.asset-icon,
+       border-radius 50%), así que una bandera rectangular quedaría con franjas
+       vacías arriba y abajo. Sin el escudo, que en este tamaño no se distingue. -->
+  <defs>
+    <clipPath id="bono-tesoro-es-clip"><circle cx="32" cy="32" r="32"/></clipPath>
+  </defs>
+  <g clip-path="url(#bono-tesoro-es-clip)">
+    <rect width="64" height="64" fill="#AA151B"/>
+    <rect y="16" width="64" height="32" fill="#F1BF00"/>
+  </g>
+</svg>
