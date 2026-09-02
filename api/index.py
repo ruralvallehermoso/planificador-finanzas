@@ -46,6 +46,18 @@ async def lifespan(app: FastAPI):
                     with engine.begin() as conn:
                         conn.execute(text("ALTER TABLE assets ADD COLUMN bond_start_date DATE"))
                     print("✅ Migrado: añadida columna assets.bond_start_date")
+                if "isin" not in existing_cols:
+                    with engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE assets ADD COLUMN isin VARCHAR"))
+                    print("✅ Migrado: añadida columna assets.isin")
+                if "bond_maturity_date" not in existing_cols:
+                    with engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE assets ADD COLUMN bond_maturity_date DATE"))
+                    print("✅ Migrado: añadida columna assets.bond_maturity_date")
+                if "coupon_frequency" not in existing_cols:
+                    with engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE assets ADD COLUMN coupon_frequency INTEGER"))
+                    print("✅ Migrado: añadida columna assets.coupon_frequency")
         except Exception as e:
             print(f"⚠️ Error en migración ligera de esquema: {e}")
 
@@ -235,6 +247,26 @@ def get_amortization_schedule(params: schemas.MortgageParams):
     """Genera el cuadro de amortización (Sistema Francés)"""
     return calculate_amortization_french(params.principal, params.annual_rate, params.years)
 
+@app.get("/api/bonds/reference")
+def get_bond_reference(isin: str):
+    """
+    Ficha pública de un bono por ISIN: nombre oficial, cupón y fecha de vencimiento
+    (que es la fecha en la que se paga el cupón). Sale del registro FIRDS de ESMA.
+    La usa el alta de activo para rellenar esos campos sin que haya que buscarlos.
+    """
+    import market_client
+    reference = market_client.fetch_bond_reference_data(isin)
+    if not reference:
+        raise HTTPException(status_code=404, detail="ISIN no encontrado en el registro FIRDS de ESMA")
+    return {
+        "isin": reference["isin"],
+        "name": reference["name"],
+        "coupon_rate": reference["coupon_rate"],
+        "maturity_date": reference["maturity_date"].isoformat(),
+        "currency": reference["currency"],
+    }
+
+
 # ============= Markets & History Endpoints =============
 
 @app.post("/api/update_markets")
@@ -250,8 +282,35 @@ def update_markets(db: Session = Depends(get_db)):
         
         # 2. Renta Fija (Bonos con cupón / TIR o ticker)
         bond_assets = [a for a in assets if a.category == "Renta Fija" or a.coupon_rate]
+        # Los bonos con ISIN a los que les falte la fecha de vencimiento no pueden
+        # devengar cupón corrido, así que se completa su ficha antes de valorarlos.
+        # Así los que ya estaban dados de alta se arreglan solos en la primera
+        # actualización, sin tener que editarlos a mano.
+        for bond in bond_assets:
+            if not getattr(bond, "isin", None) or getattr(bond, "bond_maturity_date", None):
+                continue
+            reference = market_client.fetch_bond_reference_data(bond.isin)
+            if reference and reference.get("maturity_date"):
+                bond.bond_maturity_date = reference["maturity_date"]
+                if not bond.coupon_rate and reference.get("coupon_rate"):
+                    bond.coupon_rate = reference["coupon_rate"]
+                print(f"✅ Ficha completada para {bond.id}: vence {bond.bond_maturity_date}, cupón {bond.coupon_rate}%")
+        db.commit()
+
         bond_prices = market_client.fetch_bond_prices(bond_assets, usd_to_eur=usd_to_eur)
         
+        # 2b. Resto de activos identificados por ISIN y sin ticker de Yahoo:
+        # Börse Frankfurt cotiza por ISIN lo que Yahoo no tiene indexado. Los que
+        # ya tienen yahoo_symbol siguen por su vía de siempre, para no cambiar el
+        # precio de nada que hoy funcione.
+        isin_prices = {}
+        for a in assets:
+            if a.id in bond_prices or a.manual or a.yahoo_symbol or not getattr(a, "isin", None):
+                continue
+            isin_price = market_client.fetch_isin_price(a.isin, usd_to_eur=usd_to_eur)
+            if isin_price:
+                isin_prices[a.id] = isin_price
+
         # 3. Acciones y Fondos (Yahoo)
         yahoo_symbols = {a.id: a.yahoo_symbol for a in assets if a.yahoo_symbol and not a.manual and a.id not in bond_prices}
         yahoo_prices = market_client.fetch_yahoo_prices(yahoo_symbols, usd_to_eur=usd_to_eur)
@@ -284,7 +343,7 @@ def update_markets(db: Session = Depends(get_db)):
                 acc_id = f"idx_{account['account_number']}"
                 indexa_prices[acc_id] = float(account['market_value'])
         
-        merged_prices = {**yahoo_prices, **bond_prices, **cg_prices, **indexa_prices}
+        merged_prices = {**yahoo_prices, **isin_prices, **bond_prices, **cg_prices, **indexa_prices}
         crud.update_prices_bulk(db, merged_prices)
         
         # Save History

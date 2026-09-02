@@ -3,6 +3,9 @@
  */
 
 import { getAssetById, updateAsset, updateAssetAPI, createAssetAPI, deleteAssetAPI } from '../data/assets.js';
+import { BACKEND_URL } from '../config.js';
+
+const ISIN_HINT_DEFAULT = 'Con ISIN el precio sale de la cotización real en Börse Frankfurt y se le suma el cupón corrido. Sin ISIN, un bono con cupón se valora por devengo (una recta).';
 
 let currentAssetId = null;
 let isCreationMode = false;
@@ -42,6 +45,10 @@ export function createModal() {
                     </div>
                 </div>
 
+                <label class="input-label">ISIN (opcional, precio real de mercado)</label>
+                <input type="text" id="asset-isin" class="modal-input" placeholder="ej: ES0000012O67 (Bono del Estado español)">
+                <small id="isin-hint">${ISIN_HINT_DEFAULT}</small>
+
                 <div id="bond-fields">
                     <div class="modal-row">
                         <div>
@@ -53,7 +60,21 @@ export function createModal() {
                             <input type="date" id="asset-bond-date" class="modal-input">
                         </div>
                     </div>
-                    <small>El cupón se devenga desde esta fecha (interés simple, sin componer). Si se deja vacío, se usa hoy.</small>
+                    <div class="modal-row">
+                        <div>
+                            <label class="input-label">Vencimiento (pago del cupón)</label>
+                            <input type="date" id="asset-bond-maturity" class="modal-input">
+                        </div>
+                        <div>
+                            <label class="input-label">Frecuencia del cupón</label>
+                            <select id="asset-coupon-freq" class="modal-input modal-select">
+                                <option value="1">Anual</option>
+                                <option value="2">Semestral</option>
+                                <option value="4">Trimestral</option>
+                            </select>
+                        </div>
+                    </div>
+                    <small>El cupón se paga en el aniversario del vencimiento: con esa fecha se calcula el corrido que se suma al precio limpio de mercado. La fecha de compra solo se usa cuando no hay ISIN, para el devengo lineal.</small>
                 </div>
 
                 <label class="input-label">Símbolo Yahoo Finance (opcional, solo ETFs/fondos cotizados)</label>
@@ -116,6 +137,11 @@ export function setupModalListeners(onSave) {
         });
     }
 
+    const isinInput = document.getElementById('asset-isin');
+    if (isinInput) {
+        isinInput.addEventListener('blur', autofillFromIsin);
+    }
+
     // Close on overlay click
     if (modal) {
         modal.addEventListener('click', (e) => {
@@ -123,6 +149,47 @@ export function setupModalListeners(onSave) {
                 closeModal();
             }
         });
+    }
+}
+
+/**
+ * Rellena nombre, cupón y vencimiento a partir del ISIN, con la ficha oficial del
+ * bono que sirve el backend (registro FIRDS de ESMA). El vencimiento es el dato
+ * que hace falta para el cupón corrido: es la fecha en la que se paga el cupón.
+ */
+async function autofillFromIsin() {
+    const isinInput = document.getElementById('asset-isin');
+    const hint = document.getElementById('isin-hint');
+    const isin = (isinInput?.value || '').trim().toUpperCase();
+
+    if (!isin) {
+        if (hint) hint.textContent = ISIN_HINT_DEFAULT;
+        return;
+    }
+    isinInput.value = isin;
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/bonds/reference?isin=${encodeURIComponent(isin)}`);
+        if (!res.ok) {
+            if (hint) hint.textContent = `Sin ficha para ${isin} en el registro de ESMA: se valorará por devengo del cupón.`;
+            return;
+        }
+
+        const data = await res.json();
+        const nameInput = document.getElementById('asset-name');
+        const couponInput = document.getElementById('asset-coupon');
+        const maturityInput = document.getElementById('asset-bond-maturity');
+
+        // Solo se rellena lo que esté vacío: si el usuario ya ha escrito algo, manda él.
+        if (nameInput && !nameInput.value && data.name) nameInput.value = data.name;
+        if (couponInput && !couponInput.value && data.coupon_rate !== null) couponInput.value = data.coupon_rate;
+        if (maturityInput && !maturityInput.value && data.maturity_date) maturityInput.value = data.maturity_date;
+
+        if (hint) {
+            hint.textContent = `${data.name || isin} · cupón ${data.coupon_rate ?? '?'}% · vence ${data.maturity_date || '?'}`;
+        }
+    } catch (error) {
+        console.error('❌ Error consultando la ficha del bono:', error);
     }
 }
 
@@ -145,6 +212,10 @@ export function openAddAssetModal() {
     const platInput = document.getElementById('asset-plat');
     const couponInput = document.getElementById('asset-coupon');
     const bondDateInput = document.getElementById('asset-bond-date');
+    const isinInput = document.getElementById('asset-isin');
+    const maturityInput = document.getElementById('asset-bond-maturity');
+    const freqInput = document.getElementById('asset-coupon-freq');
+    const isinHint = document.getElementById('isin-hint');
     const yahooInput = document.getElementById('asset-yahoo');
     const qtyInput = document.getElementById('manual-qty');
     const priceInput = document.getElementById('manual-price');
@@ -166,6 +237,10 @@ export function openAddAssetModal() {
     if (platInput) platInput.value = '';
     if (couponInput) couponInput.value = '';
     if (bondDateInput) bondDateInput.value = '';
+    if (isinInput) isinInput.value = '';
+    if (maturityInput) maturityInput.value = '';
+    if (freqInput) freqInput.value = '1';
+    if (isinHint) isinHint.textContent = ISIN_HINT_DEFAULT;
     if (yahooInput) yahooInput.value = '';
     if (qtyInput) qtyInput.value = '';
     if (priceInput) priceInput.value = '';
@@ -254,6 +329,9 @@ async function saveChanges() {
         const plat = document.getElementById('asset-plat')?.value || '';
         const coupon = parseFloat(document.getElementById('asset-coupon')?.value || 0);
         const bondStartDate = document.getElementById('asset-bond-date')?.value || null;
+        const isin = document.getElementById('asset-isin')?.value || null;
+        const bondMaturity = document.getElementById('asset-bond-maturity')?.value || null;
+        const couponFreq = parseInt(document.getElementById('asset-coupon-freq')?.value || '1', 10);
         const yahoo = document.getElementById('asset-yahoo')?.value || null;
 
         await createAssetAPI({
@@ -265,6 +343,9 @@ async function saveChanges() {
             price: price > 0 ? price : 1.0,
             coupon_rate: coupon > 0 ? coupon : null,
             bond_start_date: bondStartDate || null,
+            isin: isin ? isin.trim().toUpperCase() : null,
+            bond_maturity_date: bondMaturity || null,
+            coupon_frequency: couponFreq > 0 ? couponFreq : 1,
             yahoo: yahoo ? yahoo.trim() : null
         });
     } else {

@@ -232,7 +232,7 @@ export function createSimulatorView() {
     </div>
 
     <!-- Configuration Modal -->
-    <div id="simulator-config-modal" class="modal-overlay">
+    <div id="simulator-config-modal" class="modal-overlay-v2">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Configuración de Hipoteca</h3>
@@ -269,7 +269,7 @@ export function createSimulatorView() {
     </div>
 
     <!-- Detail Information Modal -->
-    <div id="simulator-detail-modal" class="modal-overlay">
+    <div id="simulator-detail-modal" class="modal-overlay-v2">
         <div class="modal-content" style="max-width: 600px; max-height: 85vh; display: flex; flex-direction: column;">
             <div class="modal-header">
                 <h3 class="modal-title" id="detail-modal-title">Detalle</h3>

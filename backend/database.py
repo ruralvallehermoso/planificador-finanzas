@@ -57,6 +57,18 @@ try:
             print("🔄 Migrating SQLite schema: Adding coupon_rate column to assets table...")
             conn.execute(text("ALTER TABLE assets ADD COLUMN coupon_rate FLOAT"))
             conn.commit()
+        if col_names and "isin" not in col_names:
+            print("🔄 Migrating SQLite schema: Adding isin column to assets table...")
+            conn.execute(text("ALTER TABLE assets ADD COLUMN isin VARCHAR"))
+            conn.commit()
+        if col_names and "bond_maturity_date" not in col_names:
+            print("🔄 Migrating SQLite schema: Adding bond_maturity_date column to assets table...")
+            conn.execute(text("ALTER TABLE assets ADD COLUMN bond_maturity_date DATE"))
+            conn.commit()
+        if col_names and "coupon_frequency" not in col_names:
+            print("🔄 Migrating SQLite schema: Adding coupon_frequency column to assets table...")
+            conn.execute(text("ALTER TABLE assets ADD COLUMN coupon_frequency INTEGER"))
+            conn.commit()
 except Exception:
     pass
 

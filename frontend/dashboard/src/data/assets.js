@@ -36,12 +36,15 @@ export async function loadAssetsFromAPI() {
             price: a.price_eur,
             currency: a.currency || 'EUR',
             yahoo: a.yahoo_symbol || null,
+            isin: a.isin || null,
             api_id: a.coingecko_id || null,
             coincap_id: a.coincap_id || null,
             indexa_api: a.indexa_api || false,
             manual: a.manual || false,
             coupon_rate: a.coupon_rate || null,
             bond_start_date: a.bond_start_date || null,
+            bond_maturity_date: a.bond_maturity_date || null,
+            coupon_frequency: a.coupon_frequency || 1,
             // Las cuentas Indexa no guardan image_url en la BD: el icono correcto solo se
             // asigna cuando updateIndexa() consigue refrescar en vivo desde la API de Indexa.
             // Si esa llamada falla (token caducado, etc.), sin este fallback se quedan con el
@@ -202,12 +205,17 @@ export async function createAssetAPI(assetData) {
             price_eur: parseFloat(assetData.price || assetData.price_eur || 1.0),
             currency: assetData.currency || 'EUR',
             yahoo_symbol: assetData.yahoo || assetData.yahoo_symbol || null,
+            isin: assetData.isin ? String(assetData.isin).trim().toUpperCase() : null,
             coingecko_id: assetData.api_id || assetData.coingecko_id || null,
             coincap_id: assetData.coincap_id || null,
             indexa_api: false,
-            manual: assetData.manual !== undefined ? assetData.manual : (assetData.cat === 'Cash' || !assetData.yahoo),
+            // Un activo con ISIN sí tiene precio automático (Börse Frankfurt), así que
+            // no debe marcarse como manual aunque no tenga símbolo de Yahoo.
+            manual: assetData.manual !== undefined ? assetData.manual : (assetData.cat === 'Cash' || (!assetData.yahoo && !assetData.isin)),
             coupon_rate: assetData.coupon_rate ? parseFloat(assetData.coupon_rate) : null,
             bond_start_date: assetData.bond_start_date || null,
+            bond_maturity_date: assetData.bond_maturity_date || null,
+            coupon_frequency: assetData.coupon_frequency ? parseInt(assetData.coupon_frequency, 10) : 1,
             image_url: assetData.img || assetData.image_url || null
         };
 
@@ -229,12 +237,15 @@ export async function createAssetAPI(assetData) {
                 price: created.price_eur,
                 currency: created.currency || 'EUR',
                 yahoo: created.yahoo_symbol || null,
+                isin: created.isin || null,
                 api_id: created.coingecko_id || null,
                 coincap_id: created.coincap_id || null,
                 indexa_api: created.indexa_api || false,
                 manual: created.manual || false,
                 coupon_rate: created.coupon_rate || null,
                 bond_start_date: created.bond_start_date || null,
+                bond_maturity_date: created.bond_maturity_date || null,
+                coupon_frequency: created.coupon_frequency || 1,
                 img: created.image_url || 'https://via.placeholder.com/64',
                 change24h: 0.0
             });

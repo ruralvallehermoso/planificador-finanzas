@@ -14,12 +14,15 @@ class AssetBase(BaseModel):
     price_eur: float
     currency: Optional[str] = None
     yahoo_symbol: Optional[str] = None
+    isin: Optional[str] = None
     coingecko_id: Optional[str] = None
     coincap_id: Optional[str] = None
     indexa_api: bool = False
     manual: bool = False
     coupon_rate: Optional[float] = None
     bond_start_date: Optional[date] = None
+    bond_maturity_date: Optional[date] = None
+    coupon_frequency: Optional[int] = 1
     image_url: Optional[str] = None
 
 
@@ -36,11 +39,14 @@ class AssetUpdate(BaseModel):
     price_eur: Optional[float] = None
     currency: Optional[str] = None
     yahoo_symbol: Optional[str] = None
+    isin: Optional[str] = None
     coingecko_id: Optional[str] = None
     coincap_id: Optional[str] = None
     manual: Optional[bool] = None
     coupon_rate: Optional[float] = None
     bond_start_date: Optional[date] = None
+    bond_maturity_date: Optional[date] = None
+    coupon_frequency: Optional[int] = None
     image_url: Optional[str] = None
 
 

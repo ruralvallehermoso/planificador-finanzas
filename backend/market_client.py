@@ -1,15 +1,20 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Dict, List, Tuple
+import calendar
+from datetime import date, datetime
+from typing import Any, Dict, List, Tuple
 
 import os
+import re
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d"
+ESMA_FIRDS_URL = "https://registers.esma.europa.eu/solr/esma_registers_firds/select"
+BOERSE_FRANKFURT_PRICE_URL = "https://api.boerse-frankfurt.de/v1/data/price_information/single?isin={isin}"
+BOERSE_FRANKFURT_QUOTE_URL = "https://api.boerse-frankfurt.de/v1/data/quote_box/single?isin={isin}"
 COINGECKO_SIMPLE_URL = "https://api.coingecko.com/api/v3/simple/price"
 COINGECKO_MARKET_CHART_URL = "https://api.coingecko.com/api/v3/coins/{id}/market_chart"
 COINCAP_BASE_URL = "https://rest.coincap.io/v3"
@@ -72,10 +77,200 @@ def fetch_yahoo_prices(symbols: Dict[str, str], usd_to_eur: float | None = None)
     return prices
 
 
+def fetch_bond_reference_data(isin: str) -> Dict[str, Any] | None:
+    """
+    Ficha del bono (vencimiento, cupón y nombre oficial) desde FIRDS, el registro
+    público de instrumentos financieros de ESMA.
+
+    Es la fuente que da la FECHA DE PAGO DEL CUPÓN, que no expone ni Yahoo ni la
+    API de cotización de Fráncfort: en la deuda soberana europea el cupón se paga
+    en el aniversario del vencimiento (`bnd_maturity_date`), así que con esa fecha
+    y el tipo (`bnd_fixed_rate`) ya se puede calcular el cupón corrido.
+
+    Registro oficial, gratuito y sin clave, que cubre cualquier ISIN admitido a
+    negociación en la UE: deuda española y alemana, y también Treasuries listados
+    aquí. Devuelve None si el ISIN no está o la consulta falla.
+    """
+    if not isin:
+        return None
+    clean_isin = re.sub(r"[^A-Za-z0-9]", "", str(isin)).upper()
+    if not clean_isin:
+        return None
+
+    params = {
+        "q": f"isin:{clean_isin}",
+        "wt": "json",
+        "rows": 5,
+        "fl": "gnr_full_name,bnd_maturity_date,bnd_fixed_rate,gnr_notional_curr_code",
+    }
+    try:
+        res = requests.get(ESMA_FIRDS_URL, params=params, headers=DEFAULT_HEADERS, timeout=TIMEOUT_SECONDS)
+        res.raise_for_status()
+        docs = res.json().get("response", {}).get("docs", [])
+    except Exception as e:
+        print(f"⚠️ Error consultando ESMA FIRDS para {clean_isin}: {e}")
+        return None
+
+    # El mismo ISIN aparece una vez por mercado donde cotiza; la ficha del emisor
+    # es idéntica en todas, así que vale la primera que traiga vencimiento.
+    for doc in docs:
+        raw_maturity = doc.get("bnd_maturity_date")
+        if not raw_maturity:
+            continue
+        try:
+            maturity = datetime.strptime(str(raw_maturity)[:10], "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        try:
+            coupon = float(doc["bnd_fixed_rate"]) if doc.get("bnd_fixed_rate") is not None else None
+        except (TypeError, ValueError):
+            coupon = None
+        name = (doc.get("gnr_full_name") or "").strip()
+        return {
+            "isin": clean_isin,
+            "name": " ".join(name.split()) or None,
+            "maturity_date": maturity,
+            "coupon_rate": coupon,
+            "currency": doc.get("gnr_notional_curr_code"),
+        }
+    return None
+
+
+def _shift_months(reference: date, months: int) -> date:
+    """Suma (o resta) meses conservando el día, recortándolo si el mes es más corto."""
+    total = reference.year * 12 + (reference.month - 1) + months
+    year, month_index = divmod(total, 12)
+    month = month_index + 1
+    day = min(reference.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def accrued_coupon_fraction(coupon_rate: float | None, maturity_date: date | None,
+                            frequency: int | None = 1, today: date | None = None) -> float:
+    """
+    Cupón corrido, en tanto por uno del nominal, con base ACT/ACT (la que usan el
+    Tesoro y el resto de deuda soberana europea).
+
+    Lo que cotiza el mercado es el precio LIMPIO: no incluye el cupón que el bono
+    lleva devengado desde el último pago. Quien compra hoy paga limpio + corrido,
+    y esa suma es lo que vale de verdad la posición.
+
+    Los pagos caen en el aniversario del vencimiento (y en sus fracciones si el
+    cupón no es anual), así que el calendario se reconstruye retrocediendo desde
+    `maturity_date` en saltos de 12/frecuencia meses.
+
+    Salvedad conocida: el primer período de un bono recién emitido suele ser
+    irregular (corre desde la emisión, no desde el aniversario anterior), así que
+    durante ese primer año el corrido puede salir algo alto. A partir del primer
+    pago el cálculo ya es exacto.
+    """
+    if not coupon_rate or coupon_rate <= 0 or not maturity_date:
+        return 0.0
+
+    freq = int(frequency or 1)
+    if freq <= 0 or 12 % freq != 0:
+        freq = 1
+
+    today = today or date.today()
+    if today >= maturity_date:
+        return 0.0
+
+    step = 12 // freq
+    next_payment = maturity_date
+    while _shift_months(next_payment, -step) > today:
+        next_payment = _shift_months(next_payment, -step)
+    prev_payment = _shift_months(next_payment, -step)
+
+    period_days = (next_payment - prev_payment).days
+    if period_days <= 0:
+        return 0.0
+    elapsed_days = max(0, (today - prev_payment).days)
+    return (coupon_rate / 100.0 / freq) * (elapsed_days / period_days)
+
+
+def fetch_isin_quote(isin: str, usd_to_eur: float | None = None) -> Dict[str, Any] | None:
+    """
+    Precio de mercado real de un instrumento a partir de su ISIN, vía la API
+    pública de la Bolsa de Fráncfort (Börse Frankfurt).
+
+    Es la pieza que le faltaba a la deuda soberana individual: Yahoo Finance no
+    indexa un bono del Estado concreto (ES0000012O67 y sus hermanos devuelven
+    "No data found, symbol may be delisted" con y sin sufijo de mercado), pero
+    Fráncfort sí lista esos bonos y los cotiza por ISIN, con su variación diaria.
+
+    Los bonos cotizan en PORCENTAJE DEL NOMINAL (banderas `tradedInPercent` /
+    `nominal` de la API): un lastPrice de 96.21 son 96,21 € por cada 100 € de
+    nominal. Se devuelve dividido entre 100 para respetar la convención que la
+    app ya usa en Renta Fija, donde `quantity` es el nominal en euros y
+    `price_eur` el valor de cada euro nominal (10.000 € nominales × 0,9621 =
+    9.621 €). Acciones y ETFs (`nominal` false) se devuelven tal cual.
+
+    Es el precio "limpio" (ex-cupón) del mercado; igual que con un ETF cotizado,
+    no se le suma devengo aparte, porque ya es el valor real al que el bono se
+    compra y se vende hoy.
+
+    Devuelve el precio ya normalizado junto con `quoted_in_percent`, que es lo que
+    permite a quien llama saber si toca sumarle el cupón corrido (un bono) o no
+    (una acción o un ETF). None si el ISIN no está listado allí o la API falla,
+    para que se pueda caer al método anterior en vez de dejar el activo a cero.
+    """
+    if not isin:
+        return None
+    clean_isin = str(isin).strip().upper()
+
+    payload = None
+    for url in (BOERSE_FRANKFURT_PRICE_URL.format(isin=clean_isin),
+                BOERSE_FRANKFURT_QUOTE_URL.format(isin=clean_isin)):
+        try:
+            res = requests.get(url, headers=DEFAULT_HEADERS, timeout=TIMEOUT_SECONDS)
+            if res.status_code != 200:
+                continue
+            data = res.json()
+            if data and data.get("lastPrice"):
+                payload = data
+                break
+        except Exception as e:
+            print(f"⚠️ Error consultando Börse Frankfurt para {clean_isin}: {e}")
+    if not payload:
+        return None
+
+    try:
+        price = float(payload.get("lastPrice") or 0.0)
+    except (TypeError, ValueError):
+        return None
+    if price <= 0:
+        return None
+
+    # `tradedInPercent` lo trae price_information; `nominal`, quote_box.
+    quoted_in_percent = bool(payload.get("tradedInPercent") or payload.get("nominal"))
+    if quoted_in_percent:
+        price /= 100.0
+
+    currency = payload.get("currency")
+    if isinstance(currency, dict):
+        currency = currency.get("originalValue")
+    if currency == "USD" and usd_to_eur:
+        price *= usd_to_eur
+
+    return {"price": round(price, 6), "quoted_in_percent": quoted_in_percent}
+
+
+def fetch_isin_price(isin: str, usd_to_eur: float | None = None) -> float | None:
+    """Precio suelto por ISIN, para quien no necesite saber cómo cotiza (ver fetch_isin_quote)."""
+    quote = fetch_isin_quote(isin, usd_to_eur=usd_to_eur)
+    return quote["price"] if quote else None
+
+
 def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict[str, float]:
     """
     Calcula el precio de activos de Renta Fija (Bonos).
 
+    - Si el activo tiene ISIN, se pide su cotización real a Börse Frankfurt
+      (ver fetch_isin_quote). Es la vía que sí cubre deuda soberana individual
+      como un bono del Estado español, y da precio dinámico de verdad: sube y
+      baja con los tipos, no es una recta. A ese precio limpio se le suma el
+      cupón corrido si se conoce la fecha de vencimiento, que es la que marca el
+      pago del cupón (ver accrued_coupon_fraction y fetch_bond_reference_data).
     - Si el yahoo_symbol resuelve a una cotización de mercado real (precio > 5,
       típico de un ETF/fondo de renta fija cotizado — la deuda soberana individual
       no tiene tickers públicos gratuitos en Yahoo Finance), se usa ese precio tal
@@ -98,11 +293,23 @@ def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict
         if not asset_id:
             continue
         symbol = getattr(bond, "yahoo_symbol", None) or (bond.get("yahoo_symbol") if isinstance(bond, dict) else None)
+        isin = getattr(bond, "isin", None) or (bond.get("isin") if isinstance(bond, dict) else None)
         coupon = getattr(bond, "coupon_rate", None) or (bond.get("coupon_rate") if isinstance(bond, dict) else None)
         start_date = getattr(bond, "bond_start_date", None) or (bond.get("bond_start_date") if isinstance(bond, dict) else None)
+        maturity = getattr(bond, "bond_maturity_date", None) or (bond.get("bond_maturity_date") if isinstance(bond, dict) else None)
+        frequency = getattr(bond, "coupon_frequency", None) or (bond.get("coupon_frequency") if isinstance(bond, dict) else None)
 
         market_price = None
-        if symbol:
+        accrued = 0.0
+        if isin:
+            quote = fetch_isin_quote(isin, usd_to_eur=usd_to_eur)
+            if quote:
+                market_price = quote["price"]
+                # Solo los bonos cotizan limpio y en % del nominal; a un ETF de renta
+                # fija no hay que sumarle nada, su cotización ya lo lleva dentro.
+                if quote["quoted_in_percent"]:
+                    accrued = accrued_coupon_fraction(coupon, maturity, frequency)
+        if market_price is None and symbol:
             try:
                 url = YAHOO_CHART_URL.format(symbol=symbol)
                 res = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
@@ -120,7 +327,7 @@ def fetch_bond_prices(bonds: List[Any], usd_to_eur: float | None = None) -> Dict
                 print(f"⚠️ Error fetching bond price from Yahoo for {asset_id} ({symbol}): {e}")
 
         if market_price is not None:
-            prices[asset_id] = market_price
+            prices[asset_id] = round(market_price + accrued, 6)
         elif coupon and coupon > 0:
             reference = start_date or date_type.today()
             days_elapsed = max(0, (date_type.today() - reference).days)
@@ -177,6 +384,50 @@ def fetch_coingecko_prices(ids: Dict[str, str]) -> Dict[str, float]:
                 prices[asset_id] = float(price)
         return prices
     except Exception:
+        return {}
+
+
+def fetch_cryptocompare_prices(symbols: Dict[str, str]) -> Dict[str, float]:
+    """
+    symbols: {asset_id: ticker} (e.g. {"btc_id": "BTC"})
+    Devuelve {asset_id: price_eur}
+    Usa la API de CryptoCompare (pricemulti).
+    """
+    if not symbols:
+        return {}
+        
+    try:
+        # CryptoCompare fsyms limit is ~300 chars, usually enough for 20-30 coins.
+        # If we have many, we should batch. For now assume < 30 coins.
+        unique_tickers = list(set(sym.upper() for sym in symbols.values()))
+        ticker_str = ",".join(unique_tickers)
+        
+        url = "https://min-api.cryptocompare.com/data/pricemulti"
+        params = {
+            "fsyms": ticker_str,
+            "tsyms": "EUR"
+        }
+        
+        res = requests.get(url, params=params, headers=DEFAULT_HEADERS, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+        
+        # CryptoCompare structure: {"BTC": {"EUR": 50000}, "ETH": {"EUR": 3000}}
+        if data.get("Response") == "Error":
+             print(f"⚠️ CryptoCompare API Error: {data.get('Message')}")
+             return {}
+             
+        prices: Dict[str, float] = {}
+        for asset_id, ticker in symbols.items():
+            t_upper = ticker.upper()
+            if t_upper in data:
+                price = data[t_upper].get("EUR")
+                if price is not None:
+                    prices[asset_id] = float(price)
+        
+        return prices
+    except Exception as e:
+        print(f"⚠️ CryptoCompare Price Error: {e}")
         return {}
 
 
